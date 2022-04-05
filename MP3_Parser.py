@@ -1,4 +1,5 @@
 from enum import Enum
+from tables import *
 
 # import numpy as np
 
@@ -25,7 +26,7 @@ class Band_Index:
         self.short_win: int
 
 
-class Header:
+class FrameHeader:
     def __init__(self):
         # Declarations
         self.__buffer: list
@@ -129,11 +130,8 @@ class Header:
             else:
                 self.__valid = False
 
-    def __set_frame_size(self):
-        pass
 
-
-class Frame:
+class FrameSideInfo:
     def __init__(self):
         # Declarations
         self.__buffer: list
@@ -165,6 +163,34 @@ class Frame:
         self.__scalefac_l: list
         self.__scalefac_s: list
 
+    @property
+    def frame_size(self):
+        return self.__frame_size
+
+    @frame_size.setter
+    def frame_size(self, frame_size):
+        self.__frame_size = frame_size
+
+    @property
+    def main_data_begin(self):
+        return self.__main_data_begin
+
+    @main_data_begin.setter
+    def main_data_begin(self, main_data_begin):
+        self.__main_data_begin = main_data_begin
+
+
+class MP3Parser:
+
+    def __init__(self, buffer):
+        # Declarations
+        self.__curr_header: FrameHeader
+        self.__curr_frame: FrameSideInfo
+        self.__buffer: list
+        self.__valid: bool
+        self.__buffer: list
+
+        # Frame
         self.__prev_samples: list
         self.__fifo: list
 
@@ -172,24 +198,13 @@ class Frame:
         self.__samples: list
         self.__pcm: list
 
-
-class MP3Parser:
-
-    def __init__(self, buffer):
-        # Declarations
-        self.__curr_header: Header
-        self.__curr_frame: Frame
-        self.__buffer: list
-        self.__valid: bool
-        self.__buffer: list
-
-        self.__curr_header = Header()
-        self.__curr_frame = Frame()
+        self.__curr_header = FrameHeader()
+        self.__curr_side_info = FrameSideInfo()
 
         if buffer[0] == 0xFF and buffer[1] >= 0xE0:
             self.__valid = True
-            self.__curr_frame.__frame_size = 0
-            self.__curr_frame.main_data_begin = 0
+            self.__curr_side_info.frame_size = 0
+            self.__curr_side_info.main_data_begin = 0
             self.__buffer = buffer
             self.__curr_header.init_header_params(self.__buffer)
         else:
@@ -201,3 +216,5 @@ class MP3Parser:
 
     def set_buffer(self, buffer):
         self.__buffer = buffer
+
+
