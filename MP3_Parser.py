@@ -212,6 +212,14 @@ class FrameSideInformation:
         self.__scalefac_l: list = [[22 * [0]] * 2] * 2
         self.__scalefac_s: list = [[[13 * [0]] * 3] * 2] * 2
 
+    @property
+    def main_data_begin(self):
+        return self.__main_data_begin
+
+    @main_data_begin.setter
+    def main_data_begin(self, main_data_begin):
+        self.__main_data_begin = main_data_begin
+
 
 class Frame:
     def __init__(self):
@@ -247,13 +255,7 @@ class Frame:
     def prev_frame_size(self, prev_frame_size):
         self.__prev_frame_size = prev_frame_size
 
-    @property
-    def main_data_begin(self):
-        return self.__main_data_begin
 
-    @main_data_begin.setter
-    def main_data_begin(self, main_data_begin):
-        self.__main_data_begin = main_data_begin
 
 
 class MP3Parser:
@@ -267,8 +269,6 @@ class MP3Parser:
 
         if buffer[0] == 0xFF and buffer[1] >= 0xE0:
             self.__valid = True
-            self.__curr_frame.frame_size = 0
-            self.__curr_frame.main_data_begin = 0
             self.__buffer = buffer
             self.__curr_header.init_header_params(self.__buffer)
             self.__set_frame_size()
@@ -310,12 +310,7 @@ class MP3Parser:
         if self.__curr_header.padding == 1:
             self.__curr_frame.frame_size += 1
 
-    @property
-    def get_buffer(self):
-        return self.__buffer
 
-    def set_buffer(self, buffer):
-        self.__buffer = buffer
 
 
 buffer = [0] * 1000
