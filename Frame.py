@@ -7,7 +7,7 @@ NUM_OF_FREQUENCIES = 576
 class Frame:
     def __init__(self):
         # Declarations
-        self.__buffer: list
+        self.__buffer: list = []
         self.__prev_frame_size: list = [0] * NUM_PREV_FRAMES
         self.__frame_size: int = 0
         self.__side_info: FrameSideInformation = FrameSideInformation()
@@ -21,6 +21,36 @@ class Frame:
 
     def init_frame_params(self, buffer, header):
         self.__buffer = buffer
+        self.__set_frame_size(header)
+        self.__side_info.set_side_info(buffer, header)
+
+    # Determine the frame size.
+    def __set_frame_size(self, header):
+        samples_per_frame = 0
+
+        if header.layer == 3:
+            if header.mpeg_version == 1:
+                samples_per_frame = 1152
+            else:
+                samples_per_frame = 576
+
+        elif header.layer == 2:
+            samples_per_frame = 1152
+
+        elif header.layer == 1:
+            samples_per_frame = 384
+
+        # Minimum frame size = 1152 / 8 * 32000 / 48000 = 96
+        # Minimum main_data size = 96 - 36 - 2 = 58
+        # Maximum main_data_begin = 2^9 = 512
+        # Therefore remember ceil(512 / 58) = 9 previous frames.
+        for i in range(NUM_PREV_FRAMES - 1, 0, -1):
+            self.prev_frame_size[i] = self.prev_frame_size[i - 1]
+        self.prev_frame_size[0] = self.frame_size
+
+        self.frame_size = ((samples_per_frame / 8) * header.bit_rate) / header.sampling_rate
+        if header.padding == 1:
+            self.frame_size += 1
 
     @property
     def frame_size(self):

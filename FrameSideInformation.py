@@ -130,6 +130,90 @@ class FrameSideInformation:
     def main_data_begin(self):
         return self.__main_data_begin
 
-    @main_data_begin.setter
-    def main_data_begin(self, main_data_begin):
-        self.__main_data_begin = main_data_begin
+    @property
+    def scfsi(self):
+        return self.__scfsi
+
+    @property
+    def part2_3_length(self):
+        return self.__part2_3_length
+
+    @property
+    def part2_length(self):
+        return self.__part2_length
+
+    @property
+    def big_value(self):
+        return self.__big_value
+
+    @property
+    def global_gain(self):
+        return self.__global_gain
+
+    @property
+    def scalefac_compress(self):
+        return self.__scalefac_compress
+
+    @property
+    def slen1(self):
+        return self.__slen1
+
+    @property
+    def slen2(self):
+        return self.__slen2
+
+    @property
+    def window_switching(self):
+        return self.__window_switching
+
+    @property
+    def block_type(self):
+        return self.__block_type
+
+    @property
+    def mixed_block_flag(self):
+        return self.__mixed_block_flag
+
+    @property
+    def switch_point_l(self):
+        return self.__switch_point_l
+
+    @property
+    def switch_point_s(self):
+        return self.__switch_point_s
+
+    @property
+    def table_select(self):
+        return self.__table_select
+
+    @property
+    def subblock_gain(self):
+        return self.__subblock_gain
+
+    @property
+    def region0_count(self):
+        return self.__region0_count
+
+    @property
+    def region1_count(self):
+        return self.__region1_count
+
+    @property
+    def preflag(self):
+        return self.__preflag
+
+    @property
+    def scalefac_scale(self):
+        return self.__scalefac_scale
+
+    @property
+    def count1table_select(self):
+        return self.__count1table_select
+
+    @property
+    def scalefac_l(self):
+        return self.__scalefac_l
+
+    @property
+    def scalefac_s(self):
+        return self.__scalefac_s

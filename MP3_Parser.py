@@ -16,44 +16,11 @@ class MP3Parser:
             self.__valid = True
             self.__buffer = buffer
             self.__curr_header.init_header_params(self.__buffer)
-            self.__set_frame_size()
+
+
 
         else:
             self.__valid = False
-
-    def initialize(self, buffer):
-        self.__buffer = buffer
-        self.__curr_header.init_header_params(self.__buffer)
-        self.__set_frame_size()
-
-    # Determine the frame size.
-    def __set_frame_size(self):
-        samples_per_frame = 0
-
-        if self.__curr_header.layer == 3:
-            if self.__curr_header.mpeg_version == 1:
-                samples_per_frame = 1152
-            else:
-                samples_per_frame = 576
-
-        elif self.__curr_header.layer == 2:
-            samples_per_frame = 1152
-
-        elif self.__curr_header.layer == 1:
-            samples_per_frame = 384
-
-        # Minimum frame size = 1152 / 8 * 32000 / 48000 = 96
-        # Minimum main_data size = 96 - 36 - 2 = 58
-        # Maximum main_data_begin = 2^9 = 512
-        # Therefore remember ceil(512 / 58) = 9 previous frames.
-        for i in range(NUM_PREV_FRAMES - 1, 0, -1):
-            self.__curr_frame.prev_frame_size[i] = self.__curr_frame.prev_frame_size[i - 1]
-        self.__curr_frame.prev_frame_size[0] = self.__curr_frame.frame_size
-
-        self.__curr_frame.frame_size = ((
-                                                samples_per_frame / 8) * self.__curr_header.bit_rate) / self.__curr_header.sampling_rate
-        if self.__curr_header.padding == 1:
-            self.__curr_frame.frame_size += 1
 
     def unpack_scalefac(self, gr: int, ch: int):
         # No scale factor transmissions for short blocks
