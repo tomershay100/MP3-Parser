@@ -1,3 +1,9 @@
+import tables
+from FrameHeader import *
+from util import *
+
+
+# Side information contains info relevant to decode main data.
 class FrameSideInformation:
     def __init__(self):
         self.__main_data_begin: int = 0
@@ -26,6 +32,99 @@ class FrameSideInformation:
 
         self.__scalefac_l: list = [[22 * [0]] * 2] * 2
         self.__scalefac_s: list = [[[13 * [0]] * 3] * 2] * 2
+
+    def set_side_info(self, buffer: list, header: FrameHeader):
+        offset = 0
+
+        # Get main data begin pointer from buffer
+        self.__main_data_begin = get_bits(buffer, 0, 9)
+        offset += 9
+        # Skip private bits
+        offset += 5 if header.channel_mode == ChannelMode.Mono else 3
+
+        # Scale factor selection info:
+        # If scfsi[scfsi_band] == 1, then scale factors for 1st granule are reused in the 2nd granule.
+        # Else, each granule has its own scale factors.
+        # scfsi_band indicates what group of scaling factors are reused (1-4)
+        for ch in range(header.channels):
+            for scfsi_band in range(4):
+                self.__scfsi[ch][scfsi_band] = get_bits(buffer, offset, 1) != 0
+                offset += 1
+
+        for gr in range(2):
+            for ch in range(header.channels):
+                # Length of scaling factors and main data in bits.
+                self.__part2_3_length[gr][ch] = get_bits(buffer, offset, 12)
+                offset += 12
+                # Number of values is each big_region.
+                self.__big_value[gr][ch] = get_bits(buffer, offset, 9)
+                offset += 9
+                # Quantizer step size.
+                self.__global_gain[gr][ch] = get_bits(buffer, offset, 8)
+                offset += 8
+                # Used to determine the values of slen1 and slen2.
+                self.__scalefac_compress[gr][ch] = get_bits(buffer, offset, 4)
+                offset += 4
+                # Number of bits given to a range of scale factors.
+                # - Normal blocks: slen1 0 - 10, slen2 11-20
+                # - Short blocks: Short blocks && mixed_block_flag == 1: slen1 0 - 5, slen2 6-11
+                # - Short blocks && mixed_block_flag == 0:
+                self.__slen1[gr][ch] = slen[self.__scalefac_compress[gr][ch]][0]
+                self.__slen2[gr][ch] = slen[self.__scalefac_compress[gr][ch]][1]
+                # If set, a not normal window is being used.
+                self.__window_switching[gr][ch] = get_bits(buffer, offset, 1) == 1
+                offset += 1
+
+                if self.__window_switching[gr][ch]:
+                    # Window type for the granule: 0=reserved, 1=start block, 2=3 short blocks, 3=end block
+                    self.__block_type[gr][ch] = get_bits(buffer, offset, 2)
+                    offset += 2
+                    # Number of scale factor bands before window switching.
+                    self.__mixed_block_flag[gr][ch] = get_bits(buffer, offset, 1) == 1
+                    offset += 1
+                    if self.__mixed_block_flag[gr][ch]:
+                        self.__switch_point_l[gr][ch] = 8
+                        self.__switch_point_s[gr][ch] = 3
+
+                    # These are set by default if window_switching is on.
+                    self.__region0_count[gr][ch] = 8 if self.__block_type[gr][ch] == 2 else 7
+                    # No third region
+                    self.__region1_count[gr][ch] = 20 - self.__region0_count[gr][ch]
+
+                    for region in range(2):
+                        # Huffman table number for a big region
+                        self.__table_select[gr][ch][region] = get_bits(buffer, offset, 5)
+                        offset += 5
+                    for window in range(3):
+                        self.__subblock_gain[gr][ch][window] = get_bits(buffer, offset, 3)
+                        offset += 3
+
+                else:
+                    # Set by default if window_switching not set.
+                    self.__block_type[gr][ch] = 0
+                    self.__mixed_block_flag[gr][ch] = False
+
+                    for region in range(3):
+                        self.__table_select[gr][ch][region] = get_bits(buffer, offset, 5)
+                        offset += 5
+
+                    # Number of scale factor bands in the first big value region.
+                    self.__region0_count[gr][ch] = get_bits(buffer, offset, 4)
+                    offset += 4
+                    # Number of scale factor bands in the third big value region.
+                    self.__region1_count[gr][ch] = get_bits(buffer, offset, 3)
+                    offset += 3
+                    # scale factor bands is 12*3 = 36
+
+                # if set, adds values from a table to the scaling factor
+                self.__preflag[gr][ch] = get_bits(buffer, offset, 1)
+                offset += 1
+                # Determines the step size.
+                self.__scalefac_scale[gr][ch] = get_bits(buffer, offset, 1)
+                offset += 1
+                # Table that determines which count1 table is used.
+                self.__count1table_select[gr][ch] = get_bits(buffer, offset, 1)
+                offset += 1
 
     @property
     def main_data_begin(self):

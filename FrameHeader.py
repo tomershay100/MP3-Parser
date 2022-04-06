@@ -175,3 +175,11 @@ class FrameHeader:
     @property
     def padding(self):
         return self.__padding
+
+    @property
+    def channel_mode(self):
+        return self.__channel_mode
+
+    @property
+    def channels(self):
+        return self.__channels
