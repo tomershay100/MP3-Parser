@@ -7,7 +7,7 @@ NUM_OF_FREQUENCIES = 576
 class Frame:
     def __init__(self):
         # Declarations
-        self.__buffer: bytes = bytes()
+        self.__buffer: list = []
         self.__prev_frame_size: list = [0] * NUM_PREV_FRAMES
         self.__frame_size: int = 0
         self.__side_info: FrameSideInformation = FrameSideInformation()

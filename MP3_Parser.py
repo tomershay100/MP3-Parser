@@ -10,7 +10,7 @@ class MP3Parser:
         self.__curr_header: FrameHeader = FrameHeader()
         self.__curr_frame: Frame = Frame()
         self.__valid: bool = False
-        self.__buffer: bytes = bytes()
+        self.__buffer: list = []
 
         if buffer[0] == 0xFF and buffer[1] >= 0xE0:
             self.__valid = True
@@ -33,7 +33,8 @@ class MP3Parser:
     def unpack_scalefac(self, gr: int, ch: int):
         # No scale factor transmissions for short blocks
         pass
-
+    def get_frame_size(self):
+        return self.__curr_frame.frame_size
 # buffer = [0] * 1000
 # buffer[0], buffer[1] = 0xFF, 0xE0
 # decoder = MP3Parser(buffer)

@@ -26,7 +26,7 @@ class Emphasis(Enum):
 class FrameHeader:
     def __init__(self):
         # Declarations
-        self.__buffer: bytes = bytes()
+        self.__buffer: list = []
         self.__mpeg_version: float = 0.0
         self.__layer: int = 0
         self.__crc: bool = False
