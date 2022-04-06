@@ -50,7 +50,7 @@ class Frame:
             self.prev_frame_size[i] = self.prev_frame_size[i - 1]
         self.prev_frame_size[0] = self.frame_size
 
-        self.frame_size = ((samples_per_frame / 8) * header.bit_rate) / header.sampling_rate
+        self.frame_size = int(((samples_per_frame / 8) * header.bit_rate) / header.sampling_rate)
         if header.padding == 1:
             self.frame_size += 1
 

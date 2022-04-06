@@ -38,7 +38,8 @@ if __name__ == '__main__':
     decoder.init_header(buffer)
     decoder.init_frame()
 
-    offset+=decoder.get_frame_size()
+    offset += decoder.get_frame_size()
+    buffer = hex_data[offset:]
     decoder.init_header(buffer)
     decoder.init_frame()
 
