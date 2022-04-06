@@ -26,7 +26,7 @@ class Emphasis(Enum):
 class FrameHeader:
     def __init__(self):
         # Declarations
-        self.__buffer: list = []
+        self.__buffer: bytes = bytes()
         self.__mpeg_version: float = 0.0
         self.__layer: int = 0
         self.__crc: bool = False
@@ -70,8 +70,8 @@ class FrameHeader:
 
     # Determine layer
     def __set_layer(self, byte):
-        byte = byte << 5
-        byte = byte >> 6
+        byte = (byte << 5) % 256
+        byte = (byte >> 6) % 256
         self.__layer = 4 - byte
 
     # Cyclic redundancy check. If set, two bytes after the header information are used up by the CRC.
@@ -183,3 +183,7 @@ class FrameHeader:
     @property
     def channels(self):
         return self.__channels
+
+    @property
+    def crc(self):
+        return self.__crc

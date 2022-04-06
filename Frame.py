@@ -7,7 +7,7 @@ NUM_OF_FREQUENCIES = 576
 class Frame:
     def __init__(self):
         # Declarations
-        self.__buffer: list = []
+        self.__buffer: bytes = bytes()
         self.__prev_frame_size: list = [0] * NUM_PREV_FRAMES
         self.__frame_size: int = 0
         self.__side_info: FrameSideInformation = FrameSideInformation()
@@ -15,14 +15,16 @@ class Frame:
         self.__prev_samples: list = [[18 * [0.0]] * 32] * 2
         self.__fifo: list = [[0.0] * 1024] * 2
 
-        self.__main_data: list = []
+        self.__main_data: bytes = bytes()
         self.__samples: list = [[NUM_OF_FREQUENCIES * [0.0]] * 2] * 2
         self.__pcm: list = [NUM_OF_FREQUENCIES * 4 * [0.0]]
 
     def init_frame_params(self, buffer, header):
         self.__buffer = buffer
         self.__set_frame_size(header)
-        self.__side_info.set_side_info(buffer, header)
+
+        starting_side_info_idx = 6 if header.crc == 0 else 4
+        self.__side_info.set_side_info(self.__buffer[starting_side_info_idx:], header)
 
     # Determine the frame size.
     def __set_frame_size(self, header):
