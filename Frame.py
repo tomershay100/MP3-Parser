@@ -98,6 +98,14 @@ class Frame:
         #         unpack_samples(header, gr, ch, bit, max_bit)
         #         bit = max_bit
 
+    def __unpack_scalefac(self, gr: int, ch: int, bit: int):
+        sfb = 0
+        window = 0
+        scalefactor_length = [slen[self.__side_info.scalefac_compress[gr][ch]][0],
+                              slen[self.__side_info.scalefac_compress[gr][ch]][1]]
+
+        return bit
+
     def __unpack_samples(self, header: FrameHeader, gr, ch, bit, max_bit):
         # Get big value region boundaries.
         if self.side_info.window_switching[gr][ch] and self.side_info.block_type[gr][ch] == 2:
@@ -106,7 +114,7 @@ class Frame:
         else:
             region0 = header.band_index.long_win[self.side_info.region0_count[gr][ch] + 1]
             region1 = header.band_index.long_win[self.side_info.region0_count[gr][ch] + 1 +
-                                                 self.side_info.region1_count[gr[ch]+1]]
+                                                 self.side_info.region1_count[gr[ch] + 1]]
         # TODO continue from here
 
     @property

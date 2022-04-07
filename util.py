@@ -1,6 +1,8 @@
 import sys
 import math
 
+BYTE_LENGTH = 8
+
 
 class Offset:
     def __init__(self):
@@ -29,7 +31,8 @@ def left_shift_char(a: bytes, b: int):
 
 
 def get_bits(buffer: list, start_bit: int, slice_len: int):
-    end_bit = start_bit + slice_len - 1
+    # exclude the last bit of the slice
+    end_bit = start_bit + slice_len - 2
     start_byte = start_bit >> 3
     end_byte = end_bit >> 3
     bits = []
@@ -39,23 +42,10 @@ def get_bits(buffer: list, start_bit: int, slice_len: int):
         out = [1 if num & (1 << (curr_bits - 1 - n)) else 0 for n in range(curr_bits)]
         bits.extend(out)
     result = 0
-    for i in range(0, slice_len):
-        result += 2 ** i * bits[i]
+    slice = bits[start_bit:end_bit + 1]
+    slice.reverse()
+
+    for i in range(len(slice)):
+        result += (2 ** i) * slice[i]
 
     return result
-
-    # # Get the bits slice
-    # result = (((buffer[start_byte] << (32 - (8 - start_bit))) % 32) >> (32 - (8 - start_bit))) % 32
-    #
-    # if start_byte != end_byte:
-    #     start_byte += 1
-    #     while start_byte != end_byte:
-    #         result <<= 8
-    #         result += buffer[start_byte]
-    #         start_byte += 1
-    #     result <<= end_bit
-    #     result += buffer[end_byte] >> (8 - end_bit)
-    # elif end_bit != 8:
-    #     result >>= (8 - end_bit)
-    #
-    # return result
