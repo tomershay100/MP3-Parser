@@ -64,8 +64,8 @@ def get_bits(buffer: list, start_bit: int, slice_len: int):
         out = [1 if num & (1 << (curr_bits - 1 - n)) else 0 for n in range(curr_bits)]
         bits.extend(out)
 
-    start_bit = start_bit % 8 - 1
-    end_bit = end_bit % 8 - 1
+    start_bit = start_bit % 8
+    end_bit = start_bit + slice_len - 1
     bit_slice = bits[start_bit:end_bit + 1]
 
     result = 0
