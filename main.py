@@ -1,17 +1,3 @@
-# from MP3_Parser import MP3Parser
-#
-# buffer = [0xFF, 0xE0]
-# for i in range(1000):
-#     buffer.append(0x00)
-#
-# buffer = bytes(buffer)
-#
-# decoder = MP3Parser(buffer)
-# pass
-# decoder.init_frame()
-# pass
-
-
 import sys
 
 from MP3_Parser import MP3Parser
@@ -42,7 +28,6 @@ if __name__ == '__main__':
     buffer = hex_data[offset:]
     decoder.init_header(buffer)
     decoder.init_frame()
+    pass
 
-    buffer = [0] * 1000
-    buffer[0], buffer[1] = 0xFF, 0xE0
-    decoder1 = MP3Parser(buffer)
+

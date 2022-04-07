@@ -84,7 +84,7 @@ class FrameHeader:
 
     # Although rarely used, there is no method for emphasis.
     def __set_emphasis(self):
-        value = (self.__buffer[3] << 6) >> 6
+        value = (((self.__buffer[3] << 6)) % 256 >> 6) % 256
         self.__emphasis = Emphasis(value)
 
     def __set_sampling_rate(self):

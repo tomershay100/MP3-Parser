@@ -69,6 +69,8 @@ class FrameSideInformation:
                 # - Normal blocks: slen1 0 - 10, slen2 11-20
                 # - Short blocks: Short blocks && mixed_block_flag == 1: slen1 0 - 5, slen2 6-11
                 # - Short blocks && mixed_block_flag == 0:
+                x = self.__scalefac_compress[gr][ch]
+                y = slen[self.__scalefac_compress[gr][ch]]
                 self.__slen1[gr][ch] = slen[self.__scalefac_compress[gr][ch]][0]
                 self.__slen2[gr][ch] = slen[self.__scalefac_compress[gr][ch]][1]
                 # If set, a not normal window is being used.
