@@ -26,7 +26,7 @@ class Frame:
 
         starting_side_info_idx = 6 if header.crc == 0 else 4
         self.__side_info.set_side_info(self.__buffer[starting_side_info_idx:], header)
-        self.set_main_data(header, [0])
+        self.__set_main_data(header, [0])
 
     # Determine the frame size.
     def __set_frame_size(self, header):
@@ -107,6 +107,7 @@ class Frame:
             region0 = header.band_index.long_win[self.side_info.region0_count[gr][ch] + 1]
             region1 = header.band_index.long_win[self.side_info.region0_count[gr][ch] + 1 +
                                                  self.side_info.region1_count[gr[ch]+1]]
+        # TODO continue from here
 
     @property
     def frame_size(self):
