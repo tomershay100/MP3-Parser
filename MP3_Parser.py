@@ -2,6 +2,8 @@
 from Frame import *
 from FrameHeader import *
 
+HEADER_SIZE = 4
+
 
 class MP3Parser:
 
@@ -15,8 +17,6 @@ class MP3Parser:
         if buffer[0] == 0xFF and buffer[1] >= 0xE0:
             self.__valid = True
             self.__buffer = buffer
-            self.__curr_header.init_header_params(self.__buffer)
-
         else:
             self.__valid = False
 
@@ -33,8 +33,16 @@ class MP3Parser:
     def unpack_scalefac(self, gr: int, ch: int):
         # No scale factor transmissions for short blocks
         pass
+
     def get_frame_size(self):
         return self.__curr_frame.frame_size
+
+    def is_valid(self):
+        return self.__valid
+
+    def get_header_size(self):
+        return HEADER_SIZE
+
 # buffer = [0] * 1000
 # buffer[0], buffer[1] = 0xFF, 0xE0
 # decoder = MP3Parser(buffer)
