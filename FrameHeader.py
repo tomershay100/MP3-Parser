@@ -2,6 +2,8 @@ from enum import Enum
 from tables import *
 import math
 
+MAX_BYTE_VALUE = 256
+
 
 class Band:
     def __init__(self):
@@ -70,8 +72,8 @@ class FrameHeader:
 
     # Determine layer
     def __set_layer(self, byte):
-        byte = (byte << 5) % 256
-        byte = (byte >> 6) % 256
+        byte = (byte << 5) % MAX_BYTE_VALUE
+        byte = (byte >> 6) % MAX_BYTE_VALUE
         self.__layer = 4 - byte
 
     # Cyclic redundancy check. If set, two bytes after the header information are used up by the CRC.
@@ -84,7 +86,7 @@ class FrameHeader:
 
     # Although rarely used, there is no method for emphasis.
     def __set_emphasis(self):
-        value = (((self.__buffer[3] << 6)) % 256 >> 6) % 256
+        value = (((self.__buffer[3] << 6)) % MAX_BYTE_VALUE >> 6) % MAX_BYTE_VALUE
         self.__emphasis = Emphasis(value)
 
     def __set_sampling_rate(self):
@@ -120,7 +122,7 @@ class FrameHeader:
     # 2 -> Dual channel
     # 3 -> Single channel
     def __set_channel_mode(self):
-        value = self.__buffer[3] >> 6
+        value = (self.__buffer[3] >> 6) % MAX_BYTE_VALUE
         self.__channel_mode = ChannelMode(value)
         self.__channels = 1 if self.__channel_mode == ChannelMode.Mono else 2
 
@@ -140,19 +142,19 @@ class FrameHeader:
                 self.__bit_rate = self.__buffer[2] * 32
             elif self.__layer == 2:
                 rates = [32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384]
-                self.__bit_rate = rates[(self.__buffer[2] >> 4) - 1] * 1000
+                self.__bit_rate = rates[(self.__buffer[2] >> 4) % MAX_BYTE_VALUE - 1] * 1000
             elif self.__layer == 3:
                 rates = [32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320]
-                self.__bit_rate = rates[(self.__buffer[2] >> 4) - 1] * 1000
+                self.__bit_rate = rates[(self.__buffer[2] >> 4) % MAX_BYTE_VALUE - 1] * 1000
             else:
                 self.__valid = False
         else:
             if self.__layer == 1:
                 rates = [32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320]
-                self.__bit_rate = rates[(self.__buffer[2] >> 4) - 1] * 1000
+                self.__bit_rate = rates[(self.__buffer[2] >> 4) % MAX_BYTE_VALUE - 1] * 1000
             elif self.__layer < 4:
                 rates = [8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160]
-                self.__bit_rate = rates[(self.__buffer[2] >> 4) - 1] * 1000
+                self.__bit_rate = rates[(self.__buffer[2] >> 4) % MAX_BYTE_VALUE - 1] * 1000
             else:
                 self.__valid = False
 
