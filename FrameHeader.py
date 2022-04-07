@@ -131,7 +131,7 @@ class FrameHeader:
 
     # If set, the frame size is 1 byte larger.
     def __set_padding(self):
-        self.__padding = self.__buffer[2] & 0x02
+        self.__padding = bool(self.__buffer[2] & 0x02)
 
     # For variable bit rate (VBR) files, this data has to be gathered constantly.
     def __set_bit_rate(self):
