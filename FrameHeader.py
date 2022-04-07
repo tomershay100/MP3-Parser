@@ -189,3 +189,11 @@ class FrameHeader:
     @property
     def crc(self):
         return self.__crc
+
+    @property
+    def band_index(self):
+        return self.__band_index
+
+    @property
+    def band_width(self):
+        return self.__band_width

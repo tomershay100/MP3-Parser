@@ -58,7 +58,7 @@ class Frame:
 
     # Due to the Huffman bits' varying length the main_data isn't aligned with the frames.
     # Unpacks the scaling factors and quantized samples.
-    def set_main_data(self, header: FrameHeader, last_buffer: list):
+    def __set_main_data(self, header: FrameHeader, last_buffer: list):
         constant = 21 if header.channel_mode == ChannelMode.Mono else 36
         if header.crc == 0:
             constant += 2
@@ -95,9 +95,18 @@ class Frame:
         #     for ch in range(header.channels):
         #         max_bit = bit + side_info.part2_3_length[gr][ch]
         #         bit = unpack_scalefac(gr, ch, bit)
-        #         unpack_samples(gr, ch, bit, max_bit)
+        #         unpack_samples(header, gr, ch, bit, max_bit)
         #         bit = max_bit
 
+    def __unpack_samples(self, header: FrameHeader, gr, ch, bit, max_bit):
+        # Get big value region boundaries.
+        if self.side_info.window_switching[gr][ch] and self.side_info.block_type[gr][ch] == 2:
+            region0 = 36
+            region1 = 576
+        else:
+            region0 = header.band_index.long_win[self.side_info.region0_count[gr][ch] + 1]
+            region1 = header.band_index.long_win[self.side_info.region0_count[gr][ch] + 1 +
+                                                 self.side_info.region1_count[gr[ch]+1]]
 
     @property
     def frame_size(self):
