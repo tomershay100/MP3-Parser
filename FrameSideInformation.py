@@ -1,37 +1,38 @@
 import tables
 from FrameHeader import *
 from util import *
+import numpy as np
 
 
 # Side information contains info relevant to decode main data.
 class FrameSideInformation:
     def __init__(self):
         self.__main_data_begin: int = 0
-        self.__scfsi: list = [[False] * 4] * 2
+        self.__scfsi: np.ndarray = np.zeros((2, 4))
 
         # Side Info for the two granules. Allocate space for two granules and two channels.
-        self.__part2_3_length: list = [[0] * 2] * 2
-        self.__part2_length: list = [[0] * 2] * 2
-        self.__big_value: list = [[0] * 2] * 2
-        self.__global_gain: list = [[0] * 2] * 2
-        self.__scalefac_compress: list = [[0] * 2] * 2
-        self.__slen1: list = [[0] * 2] * 2
-        self.__slen2: list = [[0] * 2] * 2
-        self.__window_switching: list = [[False] * 2] * 2
-        self.__block_type: list = [[0] * 2] * 2
-        self.__mixed_block_flag: list = [[False] * 2] * 2
-        self.__switch_point_l: list = [[0] * 2] * 2
-        self.__switch_point_s: list = [[0] * 2] * 2
-        self.__table_select: list = [[3 * [0]] * 2] * 2
-        self.__subblock_gain: list = [[3 * [0]] * 2] * 2
-        self.__region0_count: list = [[0] * 2] * 2
-        self.__region1_count: list = [[0] * 2] * 2
-        self.__preflag: list = [[0] * 2] * 2
-        self.__scalefac_scale: list = [[0] * 2] * 2
-        self.__count1table_select: list = [[0] * 2] * 2
+        self.__part2_3_length: np.ndarray = np.zeros((2, 2))
+        self.__part2_length: np.ndarray = np.zeros((2, 2))
+        self.__big_value: np.ndarray = np.zeros((2, 2))
+        self.__global_gain: np.ndarray = np.zeros((2, 2))
+        self.__scalefac_compress: np.ndarray = np.zeros((2, 2))
+        self.__slen1: np.ndarray = np.zeros((2, 2))
+        self.__slen2: np.ndarray = np.zeros((2, 2))
+        self.__window_switching: np.ndarray = np.zeros((2, 2))
+        self.__block_type: np.ndarray = np.zeros((2, 2))
+        self.__mixed_block_flag: np.ndarray = np.zeros((2, 2))
+        self.__switch_point_l: np.ndarray = np.zeros((2, 2))
+        self.__switch_point_s: np.ndarray = np.zeros((2, 2))
+        self.__table_select: np.ndarray = np.zeros((2, 2, 3))
+        self.__subblock_gain: np.ndarray = np.zeros((2, 2, 3))
+        self.__region0_count: np.ndarray = np.zeros((2, 2))
+        self.__region1_count: np.ndarray = np.zeros((2, 2))
+        self.__preflag: np.ndarray = np.zeros((2, 2))
+        self.__scalefac_scale: np.ndarray = np.zeros((2, 2))
+        self.__count1table_select: np.ndarray = np.zeros((2, 2))
 
-        self.__scalefac_l: list = [[22 * [0]] * 2] * 2
-        self.__scalefac_s: list = [[[13 * [0]] * 3] * 2] * 2
+        self.__scalefac_l: np.ndarray = np.zeros((2, 2, 22))
+        self.__scalefac_s: np.ndarray = np.zeros((2, 2, 3, 13))
 
     def set_side_info(self, buffer: list, header: FrameHeader):
         offset = 0
@@ -69,8 +70,8 @@ class FrameSideInformation:
                 # - Normal blocks: slen1 0 - 10, slen2 11-20
                 # - Short blocks: Short blocks && mixed_block_flag == 1: slen1 0 - 5, slen2 6-11
                 # - Short blocks && mixed_block_flag == 0:
-                self.__slen1[gr][ch] = slen[self.__scalefac_compress[gr][ch]][0]
-                self.__slen2[gr][ch] = slen[self.__scalefac_compress[gr][ch]][1]
+                self.__slen1[gr][ch] = slen[int(self.__scalefac_compress[gr][ch])][0]
+                self.__slen2[gr][ch] = slen[int(self.__scalefac_compress[gr][ch])][1]
                 # If set, a not normal window is being used.
                 self.__window_switching[gr][ch] = get_bits(buffer, offset, 1) == 1
                 offset += 1

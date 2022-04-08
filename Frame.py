@@ -1,5 +1,6 @@
 from FrameHeader import *
 from FrameSideInformation import FrameSideInformation
+import numpy as np
 
 NUM_PREV_FRAMES = 9
 NUM_OF_FREQUENCIES = 576
@@ -9,16 +10,15 @@ class Frame:
     def __init__(self):
         # Declarations
         self.__buffer: list = []
-        self.__prev_frame_size: list = [0] * NUM_PREV_FRAMES
+        self.__prev_frame_size: np.ndarray = np.zeros(NUM_PREV_FRAMES)
         self.__frame_size: int = 0
         self.__side_info: FrameSideInformation = FrameSideInformation()
-
-        self.__prev_samples: list = [[18 * [0.0]] * 32] * 2
-        self.__fifo: list = [[0.0] * 1024] * 2
+        self.__prev_samples: np.ndarray = np.zeros((2, 32, 18))
+        self.__fifo: np.ndarray = np.zeros((2, 1024))
 
         self.__main_data: bytes = bytes()
-        self.__samples: list = [[NUM_OF_FREQUENCIES * [0.0]] * 2] * 2
-        self.__pcm: list = [NUM_OF_FREQUENCIES * 4 * [0.0]]
+        self.__samples: np.ndarray = np.zeros((2, 2, NUM_OF_FREQUENCIES))
+        self.__pcm: np.ndarray = np.zeros((NUM_OF_FREQUENCIES * 4))
 
     def init_frame_params(self, buffer, header):
         self.__buffer = buffer
