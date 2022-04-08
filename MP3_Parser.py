@@ -7,45 +7,52 @@ HEADER_SIZE = 4
 
 class MP3Parser:
 
-    def __init__(self, buffer):
+    def __init__(self, file_data, offset):
         # Declarations
         self.__curr_header: FrameHeader = FrameHeader()
         self.__curr_frame: Frame = Frame()
         self.__valid: bool = False
+        # List of integers that contain the file (without ID3) data
+        self.__file_data: list = []
         self.__buffer: list = []
+        self.__file_length: int = 0
 
-        if buffer[0] == 0xFF and buffer[1] >= 0xE0:
+        # cut the id3 from hex_data
+        self.__buffer = file_data[offset:]
+
+        if self.__buffer[0] == 0xFF and self.__buffer[1] >= 0xE0:
             self.__valid = True
-            self.__buffer = buffer
+            self.__file_data = file_data
+            self.__file_length = len(file_data)
         else:
             self.__valid = False
 
-    def init_header(self, buffer):
-        if buffer[0] == 0xFF and buffer[1] >= 0xE0:
-            self.__buffer = buffer
+    def __init_curr_header(self):
+        if self.__buffer[0] == 0xFF and self.__buffer[1] >= 0xE0:
             self.__curr_header.init_header_params(self.__buffer)
         else:
             self.__valid = False
 
-    def init_frame(self):
+    def __init_curr_frame(self):
         self.__curr_frame.init_frame_params(self.__buffer, self.__curr_header)
 
-    def unpack_scalefac(self, gr: int, ch: int):
-        # No scale factor transmissions for short blocks
-        pass
+    # TODO return pcm
+    def parse_file(self, offset):
+        num_of_parsed_frames = 0
 
-    def get_frame_size(self):
-        return self.__curr_frame.frame_size
+        while self.__valid and self.__file_length > offset + HEADER_SIZE:
+            self.__init_curr_header()
+            if self.__valid:
+                self.__init_curr_frame()
+                num_of_parsed_frames += 1
+                offset += self.__curr_frame.frame_size
+                self.__buffer = self.__file_data[offset:]
 
-    def is_valid(self):
-        return self.__valid
-
-    def get_header_size(self):
-        return HEADER_SIZE
+        return num_of_parsed_frames
 
 # buffer = [0] * 1000
 # buffer[0], buffer[1] = 0xFF, 0xE0
-# decoder = MP3Parser(buffer)
+# self = MP3Parser(buffer)
 # pass
 #
 # print('[2][2] int', np.array([[0] * 2] * 2).shape)

@@ -82,7 +82,7 @@ class FrameHeader:
 
     # Additional information (not important)
     def __set_info(self):
-        self.__info = [self.__buffer[2] & 0x01, self.__buffer[3] & 0x08, self.__buffer[3] & 0x04]
+        self.__info = [bool(self.__buffer[2] & 0x01), bool(self.__buffer[3] & 0x08), bool(self.__buffer[3] & 0x04)]
 
     # Although rarely used, there is no method for emphasis.
     def __set_emphasis(self):

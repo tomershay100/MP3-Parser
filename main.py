@@ -1,4 +1,5 @@
 import sys
+import time
 
 from MP3_Parser import MP3Parser
 from ID3_Parser import ID3
@@ -32,18 +33,10 @@ if __name__ == '__main__':
 
     ################################
 
-    file_length = len(hex_data)
-    buffer = hex_data[offset:]  # cut the id3 from hex_data
-    decoder = MP3Parser(buffer)
-    i = 0
-    while decoder.is_valid() and file_length > offset + decoder.get_header_size():
-        decoder.init_header(buffer)
-        if decoder.is_valid():
-            decoder.init_frame()
-            i += 1
-            print('Parsed', i, 'th frame', 'offset', offset)
-            offset += decoder.get_frame_size()
-            buffer = hex_data[offset:]
 
-pass
+    decoder = MP3Parser(hex_data, offset)
 
+    start = time.time()
+    num_of_parsed_frames = decoder.parse_file(offset)
+    parsing_time = time.time() - start
+    print('Parsed', num_of_parsed_frames, 'frames in', parsing_time, 'seconds')
