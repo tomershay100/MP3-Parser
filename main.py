@@ -33,10 +33,9 @@ if __name__ == '__main__':
 
     ################################
 
-
     decoder = MP3Parser(hex_data, offset)
 
     start = time.time()
-    num_of_parsed_frames = decoder.parse_file(offset)
+    num_of_parsed_frames = decoder.parse_file()
     parsing_time = time.time() - start
     print('Parsed', num_of_parsed_frames, 'frames in', parsing_time, 'seconds')

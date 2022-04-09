@@ -24,6 +24,7 @@ class MP3Parser:
             self.__valid = True
             self.__file_data = file_data
             self.__file_length = len(file_data)
+            self.__offset = offset
         else:
             self.__valid = False
 
@@ -37,16 +38,16 @@ class MP3Parser:
         self.__curr_frame.init_frame_params(self.__buffer, self.__curr_header)
 
     # TODO return pcm
-    def parse_file(self, offset):
+    def parse_file(self):
         num_of_parsed_frames = 0
 
-        while self.__valid and self.__file_length > offset + HEADER_SIZE:
+        while self.__valid and self.__file_length > self.__offset + HEADER_SIZE:
             self.__init_curr_header()
             if self.__valid:
                 self.__init_curr_frame()
                 num_of_parsed_frames += 1
-                offset += self.__curr_frame.frame_size
-                self.__buffer = self.__file_data[offset:]
+                self.__offset += self.__curr_frame.frame_size
+                self.__buffer = self.__file_data[self.__offset:]
 
         return num_of_parsed_frames
 
