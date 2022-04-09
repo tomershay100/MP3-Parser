@@ -180,6 +180,21 @@ class Frame:
                                                  self.side_info.region1_count[gr[ch] + 1]]
         # TODO continue from here
 
+    def __requantize(self, gr: int, ch: int):
+        exp1, exp2 = 0.0, 0.0
+        window = 0
+        sfb = 0
+        SCALEFAC_MULT = 0.5 if self.__side_info.scalefac_scale[gr][ch] == 0 else 1
+
+        sample = 0
+        i = 0
+        while sample < 576:
+            if self.__side_info.block_type[gr][ch] == 2 or self.__side_info.mixed_block_flag[gr][ch] and sfb >= 8:
+                pass  # TODO need access the FrameHeader, for accessing the band_width.short_win
+
+            sample += 1
+            i += 1
+
     @property
     def frame_size(self):
         return self.__frame_size
