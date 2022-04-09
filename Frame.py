@@ -100,6 +100,8 @@ class Frame:
         #         unpack_samples(header, gr, ch, bit, max_bit)
         #         bit = max_bit
 
+    # Unpack the scale factor indices from the main data. slen1 and slen2 are the size (in bits) of each scaling factor.
+    # There are 21 scaling factors for long windows and 12 for each short window.
     def __unpack_scalefac(self, gr: int, ch: int, bit: int):
         sfb = 0
         window = 0
