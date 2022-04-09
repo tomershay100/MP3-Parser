@@ -1,6 +1,5 @@
 # import numpy as np
 from Frame import *
-from FrameHeader import *
 
 HEADER_SIZE = 4
 
@@ -9,7 +8,7 @@ class MP3Parser:
 
     def __init__(self, file_data, offset):
         # Declarations
-        self.__curr_header: FrameHeader = FrameHeader()
+        # self.__curr_header: FrameHeader = FrameHeader()
         self.__curr_frame: Frame = Frame()
         self.__valid: bool = False
         # List of integers that contain the file (without ID3) data
@@ -30,12 +29,12 @@ class MP3Parser:
 
     def __init_curr_header(self):
         if self.__buffer[0] == 0xFF and self.__buffer[1] >= 0xE0:
-            self.__curr_header.init_header_params(self.__buffer)
+            self.__curr_frame.init_header_params(self.__buffer)
         else:
             self.__valid = False
 
     def __init_curr_frame(self):
-        self.__curr_frame.init_frame_params(self.__buffer, self.__curr_header)
+        self.__curr_frame.init_frame_params(self.__buffer)
 
     # TODO return pcm
     def parse_file(self):
