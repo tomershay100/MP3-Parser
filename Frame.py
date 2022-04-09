@@ -76,6 +76,7 @@ class Frame:
         #             ptr_offset = self.__side_info.main_data_begin + frame * constant
         #             buffer_offset = 0
         #
+        #             # TODO change to numpy array
         #             part = [[0] * NUM_PREV_FRAMES]
         #             part[frame] = self.__side_info.main_data_begin
         #             for i in range(frame):
