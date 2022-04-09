@@ -24,11 +24,11 @@ class Frame:
 
     def init_frame_params(self, buffer):
         self.__buffer = buffer
-        self.__set_frame_size(self.__header)
+        self.__set_frame_size()
 
         starting_side_info_idx = 6 if self.__header.crc == 0 else 4
         self.__side_info.set_side_info(self.__buffer[starting_side_info_idx:], self.__header)
-        self.__set_main_data(self.__header, [0])
+        self.__set_main_data([0])
 
     # Determine the frame size.
     def __set_frame_size(self, ):
