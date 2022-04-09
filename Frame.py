@@ -1,3 +1,4 @@
+import util
 from FrameHeader import *
 from FrameSideInformation import FrameSideInformation
 import numpy as np
@@ -16,7 +17,7 @@ class Frame:
         self.__prev_samples: np.ndarray = np.zeros((2, 32, 18))
         self.__fifo: np.ndarray = np.zeros((2, 1024))
 
-        self.__main_data: bytes = bytes()
+        self.__main_data: list = []
         self.__samples: np.ndarray = np.zeros((2, 2, NUM_OF_FREQUENCIES))
         self.__pcm: np.ndarray = np.zeros((NUM_OF_FREQUENCIES * 4))
 
@@ -105,7 +106,66 @@ class Frame:
         scalefactor_length = [slen[self.__side_info.scalefac_compress[gr][ch]][0],
                               slen[self.__side_info.scalefac_compress[gr][ch]][1]]
 
-        return bit
+        # No scale factor transmission for short blocks.
+        if self.__side_info.block_type[gr][ch] == 2 and self.__side_info.window_switching[gr][ch]:
+            if self.__side_info.mixed_block_flag[gr][ch] == 1:  # Mixed blocks.
+                for sfb in range(8):
+                    self.__side_info.scalefac_l[gr][ch][sfb] = util.get_bits(self.__main_data, bit,
+                                                                             scalefactor_length[0])
+                    bit += scalefactor_length[0]
+
+                for sfb in range(3, 6):
+                    for window in range(3):
+                        self.__side_info.scalefac_s[gr][ch][window][sfb] = util.get_bits(self.__main_data, bit,
+                                                                                         scalefactor_length[0])
+                        bit += scalefactor_length[0]
+            else:  # Short blocks.
+                for sfb in range(6):
+                    for window in range(3):
+                        self.__side_info.scalefac_s[gr][ch][window][sfb] = util.get_bits(self.__main_data, bit,
+                                                                                         scalefactor_length[0])
+                        bit += scalefactor_length[0]
+
+            for sfb in range(6, 12):
+                for window in range(3):
+                    self.__side_info.scalefac_s[gr][ch][window][sfb] = util.get_bits(self.__main_data, bit,
+                                                                                     scalefactor_length[1])
+                    bit += scalefactor_length[1]
+
+            for window in range(3):
+                self.__side_info.scalefac_s[gr][ch][window][12] = 0
+
+        # Scale factors for long blocks.
+        else:
+            if gr == 0:
+                for sfb in range(11):
+                    self.__side_info.scalefac_l[gr][ch][sfb] = util.get_bits(self.__main_data, bit,
+                                                                             scalefactor_length[0])
+                    bit += scalefactor_length[0]
+                for sfb in range(11, 21):
+                    self.__side_info.scalefac_l[gr][ch][sfb] = util.get_bits(self.__main_data, bit,
+                                                                             scalefactor_length[1])
+                    bit += scalefactor_length[1]
+            else:  # Scale factors might be reused in the second granule.
+                SB = [6, 11, 16, 21]
+                for i in range(2):
+                    for sfb in range(SB[i]):
+                        if self.__side_info.scfsi[ch][i]:
+                            self.__side_info.scalefac_l[gr][ch][sfb] = self.__side_info.scalefac_l[0][ch][sfb]
+                        else:
+                            self.__side_info.scalefac_l[gr][ch][sfb] = util.get_bits(self.__main_data, bit,
+                                                                                     scalefactor_length[0])
+                            bit += scalefactor_length[0]
+                for i in range(2, 4):
+                    for sfb in range(SB[1], SB[i]):
+                        if self.__side_info.scfsi[ch][i]:
+                            self.__side_info.scalefac_l[gr][ch][sfb] = self.__side_info.scalefac_l[0][ch][sfb]
+                        else:
+                            self.__side_info.scalefac_l[gr][ch][sfb] = util.get_bits(self.__main_data, bit,
+                                                                                     scalefactor_length[1])
+                            bit += scalefactor_length[1]
+
+            self.__side_info.scalefac_l[gr][ch][21] = 0
 
     def __unpack_samples(self, header: FrameHeader, gr, ch, bit, max_bit):
         # Get big value region boundaries.
