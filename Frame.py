@@ -1,3 +1,4 @@
+import tables
 import util
 from FrameHeader import *
 from FrameSideInformation import FrameSideInformation
@@ -181,6 +182,7 @@ class Frame:
                                                         self.side_info.region1_count[gr[ch] + 1]]
         # TODO continue from here
 
+    # The reduced samples are rescaled to their original scales and precisions.
     def __requantize(self, gr: int, ch: int):
         exp1, exp2 = 0.0, 0.0
         window = 0
@@ -191,7 +193,33 @@ class Frame:
         i = 0
         while sample < 576:
             if self.__side_info.block_type[gr][ch] == 2 or self.__side_info.mixed_block_flag[gr][ch] and sfb >= 8:
-                pass  # TODO need access the FrameHeader, for accessing the band_width.short_win
+                if i == self.__header.band_width.short_win[sfb]:
+                    i = 0
+                    if window == 2:
+                        window = 0
+                        sfb += 1
+                    else:
+                        window += 1
+
+                exp1 = self.__side_info.global_gain[gr][ch] - 210.0 - 8.0 * self.__side_info.subblock_gain[gr][ch][
+                    window]
+                exp2 = SCALEFAC_MULT * self.__side_info.scalefac_s[gr][ch][window][sfb]
+            else:
+                if sample == self.__header.band_width.long_win[sfb + 1]:
+                    # Don't increment sfb at the zeroth sample.
+                    sfb += 1
+
+                exp1 = self.__side_info.global_gain[gr][ch] - 210.0
+                exp2 = SCALEFAC_MULT * (
+                        self.__side_info.scalefac_l[gr][ch][sfb] + self.__side_info.preflag[gr][ch] * tables.pretab[
+                    sfb])
+
+            sign = -1.0 if self.__samples[gr][ch][sample] < 0 else 1.0
+            a = pow(abs(self.__samples[gr][ch][sample]), 4.0 / 3.0)
+            b = pow(2.0, exp1 / 4.0)
+            c = pow(2.0, -exp2)
+
+            self.__samples[gr][ch][sample] = sign * a * b * c
 
             sample += 1
             i += 1
