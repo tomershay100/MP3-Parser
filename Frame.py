@@ -7,6 +7,7 @@ from FrameSideInformation import FrameSideInformation
 
 NUM_PREV_FRAMES = 9
 NUM_OF_FREQUENCIES = 576
+SQRT2 = 2 ** 0.5
 
 
 class Frame:
@@ -32,8 +33,15 @@ class Frame:
         self.__side_info.set_side_info(self.__buffer[starting_side_info_idx:], self.__header)
         self.__set_main_data([0])
 
+        for gr in range(2):
+            for ch in range(self.__header.channels):
+                self.__requantize(gr, ch)
+
+            if self.__header.channel_mode == ChannelMode.JointStereo and self.__header.mode_extension[0]:
+                self.__ms_stereo(gr)
+
     # Determine the frame size.
-    def __set_frame_size(self, ):
+    def __set_frame_size(self):
         samples_per_frame = 0
 
         if self.__header.layer == 3:
@@ -195,7 +203,7 @@ class Frame:
 
         sample = 0
         i = 0
-        while sample < 576:
+        while sample < NUM_OF_FREQUENCIES:
             if self.__side_info.block_type[gr][ch] == 2 or (self.__side_info.mixed_block_flag[gr][ch] and sfb >= 8):
                 if i == self.__header.band_width.short_win[sfb]:
                     i = 0
@@ -227,6 +235,13 @@ class Frame:
 
             sample += 1
             i += 1
+
+    def __ms_stereo(self, gr: int):
+        for sample in range(NUM_OF_FREQUENCIES):
+            middle = self.__samples[gr][0][sample]
+            side = self.__samples[gr][1][sample]
+            self.__samples[gr][0][sample] = (middle + side) / SQRT2
+            self.__samples[gr][1][sample] = (middle - side) / SQRT2
 
     @property
     def frame_size(self):
