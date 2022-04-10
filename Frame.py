@@ -24,13 +24,13 @@ class Frame:
         self.__samples: np.ndarray = np.zeros((2, 2, NUM_OF_FREQUENCIES))
         self.__pcm: np.ndarray = np.zeros((NUM_OF_FREQUENCIES * 4))
 
-    def init_frame_params(self, buffer):
+    def init_frame_params(self, buffer, file_data, curr_offset):
         self.__buffer = buffer
         self.__set_frame_size()
 
         starting_side_info_idx = 6 if self.__header.crc == 0 else 4
         self.__side_info.set_side_info(self.__buffer[starting_side_info_idx:], self.__header)
-        self.__set_main_data([0])
+        self.__set_main_data(file_data, curr_offset)
 
     # Determine the frame size.
     def __set_frame_size(self, ):
