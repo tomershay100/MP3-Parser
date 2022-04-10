@@ -201,3 +201,5 @@ class FrameHeader:
     @property
     def mode_extension(self):
         return self.__mode_extension
+
+
