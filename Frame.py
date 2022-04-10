@@ -1,5 +1,6 @@
 import numpy as np
 
+import tables
 import util
 from FrameHeader import *
 from FrameSideInformation import FrameSideInformation
@@ -15,6 +16,7 @@ class Frame:
         self.__prev_frame_size: np.ndarray = np.zeros(NUM_PREV_FRAMES)
         self.__frame_size: int = 0
         self.__side_info: FrameSideInformation = FrameSideInformation()
+        self.__header: FrameHeader = FrameHeader()
         self.__prev_samples: np.ndarray = np.zeros((2, 32, 18))
         self.__fifo: np.ndarray = np.zeros((2, 1024))
 
@@ -22,28 +24,28 @@ class Frame:
         self.__samples: np.ndarray = np.zeros((2, 2, NUM_OF_FREQUENCIES))
         self.__pcm: np.ndarray = np.zeros((NUM_OF_FREQUENCIES * 4))
 
-    def init_frame_params(self, buffer, header):
+    def init_frame_params(self, buffer):
         self.__buffer = buffer
-        self.__set_frame_size(header)
+        self.__set_frame_size()
 
-        starting_side_info_idx = 6 if header.crc == 0 else 4
-        self.__side_info.set_side_info(self.__buffer[starting_side_info_idx:], header)
-        self.__set_main_data(header, [0])
+        starting_side_info_idx = 6 if self.__header.crc == 0 else 4
+        self.__side_info.set_side_info(self.__buffer[starting_side_info_idx:], self.__header)
+        self.__set_main_data([0])
 
     # Determine the frame size.
-    def __set_frame_size(self, header):
+    def __set_frame_size(self, ):
         samples_per_frame = 0
 
-        if header.layer == 3:
-            if header.mpeg_version == 1:
+        if self.__header.layer == 3:
+            if self.__header.mpeg_version == 1:
                 samples_per_frame = 1152
             else:
                 samples_per_frame = 576
 
-        elif header.layer == 2:
+        elif self.__header.layer == 2:
             samples_per_frame = 1152
 
-        elif header.layer == 1:
+        elif self.__header.layer == 1:
             samples_per_frame = 384
 
         # Minimum frame size = 1152 / 8 * 32000 / 48000 = 96
@@ -54,15 +56,15 @@ class Frame:
             self.prev_frame_size[i] = self.prev_frame_size[i - 1]
         self.prev_frame_size[0] = self.frame_size
 
-        self.frame_size = int(((samples_per_frame / 8) * header.bit_rate) / header.sampling_rate)
-        if header.padding == 1:
+        self.frame_size = int(((samples_per_frame / 8) * self.__header.bit_rate) / self.__header.sampling_rate)
+        if self.__header.padding == 1:
             self.frame_size += 1
 
     # Due to the Huffman bits' varying length the main_data isn't aligned with the frames.
     # Unpacks the scaling factors and quantized samples.
-    def __set_main_data(self, header: FrameHeader, last_buffer: list):
-        constant = 21 if header.channel_mode == ChannelMode.Mono else 36
-        if header.crc == 0:
+    def __set_main_data(self, last_buffer: list):
+        constant = 21 if self.__header.channel_mode == ChannelMode.Mono else 36
+        if self.__header.crc == 0:
             constant += 2
 
         # We'll put the main data in its own buffer. Main data may be larger than the previous frame and doesn't
@@ -173,16 +175,58 @@ class Frame:
 
         return bit
 
-    def __unpack_samples(self, header: FrameHeader, gr, ch, bit, max_bit):
+    def __unpack_samples(self, gr, ch, bit, max_bit):
         # Get big value region boundaries.
         if self.side_info.window_switching[gr][ch] and self.side_info.block_type[gr][ch] == 2:
             region0 = 36
             region1 = 576
         else:
-            region0 = header.band_index.long_win[self.side_info.region0_count[gr][ch] + 1]
-            region1 = header.band_index.long_win[self.side_info.region0_count[gr][ch] + 1 +
-                                                 self.side_info.region1_count[gr[ch] + 1]]
+            region0 = self.__header.band_index.long_win[self.side_info.region0_count[gr][ch] + 1]
+            region1 = self.__header.band_index.long_win[self.side_info.region0_count[gr][ch] + 1 +
+                                                        self.side_info.region1_count[gr[ch] + 1]]
         # TODO continue from here
+
+    # The reduced samples are rescaled to their original scales and precisions.
+    def __requantize(self, gr: int, ch: int):
+        exp1, exp2 = 0.0, 0.0
+        window = 0
+        sfb = 0
+        SCALEFAC_MULT = 0.5 if self.__side_info.scalefac_scale[gr][ch] == 0 else 1
+
+        sample = 0
+        i = 0
+        while sample < 576:
+            if self.__side_info.block_type[gr][ch] == 2 or (self.__side_info.mixed_block_flag[gr][ch] and sfb >= 8):
+                if i == self.__header.band_width.short_win[sfb]:
+                    i = 0
+                    if window == 2:
+                        window = 0
+                        sfb += 1
+                    else:
+                        window += 1
+
+                exp1 = self.__side_info.global_gain[gr][ch] - 210.0 - 8.0 * self.__side_info.subblock_gain[gr][ch][
+                    window]
+                exp2 = SCALEFAC_MULT * self.__side_info.scalefac_s[gr][ch][window][sfb]
+            else:
+                if sample == self.__header.band_index.long_win[sfb + 1]:
+                    # Don't increment sfb at the zeroth sample.
+                    sfb += 1
+
+                exp1 = self.__side_info.global_gain[gr][ch] - 210.0
+                exp2 = SCALEFAC_MULT * (
+                        self.__side_info.scalefac_l[gr][ch][sfb] + self.__side_info.preflag[gr][ch] * tables.pretab[
+                    sfb])
+
+            sign = -1.0 if self.__samples[gr][ch][sample] < 0 else 1.0
+            a = pow(abs(self.__samples[gr][ch][sample]), 4.0 / 3.0)
+            b = pow(2.0, exp1 / 4.0)
+            c = pow(2.0, -exp2)
+
+            self.__samples[gr][ch][sample] = sign * a * b * c
+
+            sample += 1
+            i += 1
 
     @property
     def frame_size(self):
@@ -203,3 +247,6 @@ class Frame:
     @property
     def side_info(self):
         return self.__side_info
+
+    def init_header_params(self, buffer):
+        self.__header.init_header_params(buffer)
