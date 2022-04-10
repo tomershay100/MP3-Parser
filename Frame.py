@@ -1,8 +1,9 @@
+import numpy as np
+
 import tables
 import util
 from FrameHeader import *
 from FrameSideInformation import FrameSideInformation
-import numpy as np
 
 NUM_PREV_FRAMES = 9
 NUM_OF_FREQUENCIES = 576
@@ -195,7 +196,7 @@ class Frame:
         sample = 0
         i = 0
         while sample < 576:
-            if self.__side_info.block_type[gr][ch] == 2 or self.__side_info.mixed_block_flag[gr][ch] and sfb >= 8:
+            if self.__side_info.block_type[gr][ch] == 2 or (self.__side_info.mixed_block_flag[gr][ch] and sfb >= 8):
                 if i == self.__header.band_width.short_win[sfb]:
                     i = 0
                     if window == 2:
@@ -208,7 +209,7 @@ class Frame:
                     window]
                 exp2 = SCALEFAC_MULT * self.__side_info.scalefac_s[gr][ch][window][sfb]
             else:
-                if sample == self.__header.band_width.long_win[sfb + 1]:
+                if sample == self.__header.band_index.long_win[sfb + 1]:
                     # Don't increment sfb at the zeroth sample.
                     sfb += 1
 
