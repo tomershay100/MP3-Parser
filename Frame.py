@@ -152,8 +152,9 @@ class Frame:
                     bit += scalefactor_length[1]
             else:  # Scale factors might be reused in the second granule.
                 SB = [6, 11, 16, 21]
+                PREV_SB = [0, 6, 11, 16]
                 for i in range(2):
-                    for sfb in range(SB[i]):
+                    for sfb in range(PREV_SB[i], SB[i]):
                         if self.__side_info.scfsi[ch][i]:
                             self.__side_info.scalefac_l[gr][ch][sfb] = self.__side_info.scalefac_l[0][ch][sfb]
                         else:
@@ -161,7 +162,7 @@ class Frame:
                                                                                      scalefactor_length[0])
                             bit += scalefactor_length[0]
                 for i in range(2, 4):
-                    for sfb in range(SB[1], SB[i]):
+                    for sfb in range(PREV_SB[i], SB[i]):
                         if self.__side_info.scfsi[ch][i]:
                             self.__side_info.scalefac_l[gr][ch][sfb] = self.__side_info.scalefac_l[0][ch][sfb]
                         else:
@@ -170,6 +171,8 @@ class Frame:
                             bit += scalefactor_length[1]
 
             self.__side_info.scalefac_l[gr][ch][21] = 0
+
+        return bit
 
     def __unpack_samples(self, gr, ch, bit, max_bit):
         # Get big value region boundaries.
