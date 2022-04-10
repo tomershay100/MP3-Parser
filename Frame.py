@@ -211,7 +211,7 @@ class Frame:
                     i = 2 * big_value_max[table_num] * row + 2 * col
                     value = table[i]
                     size = table[i + 1]
-                    if (value >> (32 - size)) % 256 == (bit_sample >> (32 - size)) % 256:
+                    if value >> (32 - size) == bit_sample >> (32 - size):
                         bit += size
                         values = (row, col)
                         for i in range(2):
@@ -253,7 +253,7 @@ class Frame:
                     value = quad_table_1.hcod[entry]
                     size = quad_table_1.hlen[entry]
 
-                    if (value >> (32 - size)) % 256 == (bit_sample >> (32 - size)) % 256:
+                    if value >> (32 - size) == bit_sample >> (32 - size):
                         bit += size
                         for i in range(4):
                             values[i] = int(quad_table_1.value[entry][i])
