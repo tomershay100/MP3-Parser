@@ -30,34 +30,10 @@ def left_shift_char(a: bytes, b: int):
     return result_int.to_bytes(len(a), byteorder="big")
 
 
-# def get_bits(buffer: list, start_bit: int, slice_len: int):
-#     end_bit = start_bit + slice_len - 1
-#     start_byte = start_bit >> 3
-#     end_byte = end_bit >> 3
-#     start_bit = start_bit % 8
-#     end_bit = end_bit % 8
-#
-#     # Get the bits slice
-#     result = (buffer[start_byte] << (32 - (8 - start_bit))) >> (32 - (8 - start_bit))
-#
-#     if start_byte != end_byte:
-#         start_byte += 1
-#         while start_byte != end_byte:
-#             result <<= 8
-#             result += buffer[start_byte]
-#             start_byte += 1
-#         result <<= end_bit
-#         result += buffer[end_byte] >> (8 - end_bit)
-#     elif end_bit != 8:
-#         result >>= (8 - end_bit)
-#
-#     return result
-
 def get_bits(buffer: list, start_bit: int, slice_len: int):
     # exclude the last bit of the slice
     end_bit = start_bit + slice_len - 1
-    if type(start_bit) != int:
-        pass
+
     start_byte = start_bit >> 3
     end_byte = end_bit >> 3
 
