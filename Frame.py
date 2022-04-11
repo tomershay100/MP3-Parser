@@ -9,7 +9,18 @@ from FrameSideInformation import FrameSideInformation
 
 NUM_PREV_FRAMES = 9
 NUM_OF_FREQUENCIES = 576
-SQRT2 = 2 ** 0.5
+
+SQRT2 = math.sqrt(2)
+PI = math.pi
+
+
+def init_synth_filterbank_block():
+    n = np.zeros((64, 32))
+    for i in range(64):
+        for j in range(32):
+            n[i][j] = math.cos((16.0 + i) * (2.0 * j + 1.0) * (PI / 64.0))
+
+    return n
 
 
 def create_sine_block():
@@ -54,6 +65,7 @@ class Frame:
         self.__samples: np.ndarray = np.zeros((2, 2, NUM_OF_FREQUENCIES))
         self.__pcm: np.ndarray = np.zeros((NUM_OF_FREQUENCIES * 4))
         self.__sine_block = create_sine_block()
+        self.__synth_filterbank_block = init_synth_filterbank_block()
 
     def init_frame_params(self, buffer, file_data, curr_offset):
         self.__buffer = buffer
@@ -439,7 +451,7 @@ class Frame:
                         xi += s * math.cos(math.pi / (2 * n) * (2 * i + 1 + half_n) * (2 * k + 1))
 
                     # Windowing samples.
-                    sample_block[win * n + i] = xi * self.__sine_block[self.side_info.block_type[gr][ch]][i]
+                    sample_block[win * n + i] = xi * self.__sine_block[int(self.side_info.block_type[gr][ch])][i]
 
             if self.side_info.block_type[gr][ch] == 2:
                 temp_block = np.copy(sample_block)
@@ -463,13 +475,50 @@ class Frame:
             sample += 18
 
     def __frequency_inversion(self, gr: int, ch: int):
-        pass
+        for sb in range(1, 18, 2):
+            for i in range(1, 32, 2):
+                self.__samples[gr][ch][i * 18 + sb] *= -1
 
     def __synth_filterbank(self, gr: int, ch: int):
-        pass
+
+        s, u, w = np.zeros(32), np.zeros(512), np.zeros(512)
+        pcm = np.zeros(576)
+
+        for sb in range(18):
+            for i in range(32):
+                s[i] = self.__samples[gr][ch][i * 18 + sb]
+
+            for i in range(1023, 63, -1):
+                self.__fifo[ch][i] = self.__fifo[ch][i - 64]
+
+            for i in range(64):
+                self.__fifo[ch][i] = 0.0
+                for j in range(32):
+                    self.__fifo[ch][i] += s[j] * self.__synth_filterbank_block[i][j]
+
+            for i in range(8):
+                for j in range(32):
+                    u[i * 64 + j] = self.__fifo[ch][i * 128 + j]
+                    u[i * 64 + j + 32] = self.__fifo[ch][i * 128 + j + 96]
+
+            for i in range(512):
+                w[i] = u[i] * synth_window[i]
+
+            for i in range(32):
+                sum = 0
+                for j in range(16):
+                    sum += w[j * 32 + i]
+                pcm[32 * sb + i] = sum
+
+        self.__samples[gr][ch] = pcm
 
     def __interleave(self):
-        pass
+        i = 0
+        for gr in range(2):
+            for sample in range(576):
+                for ch in range(self.__header.channels):
+                    self.__pcm[i] = self.__samples[gr][ch][sample]
+                    i += 1
 
     @property
     def frame_size(self):
