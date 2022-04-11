@@ -7,6 +7,7 @@ from FrameSideInformation import FrameSideInformation
 
 NUM_PREV_FRAMES = 9
 NUM_OF_FREQUENCIES = 576
+SQRT2 = 2 ** 0.5
 
 
 class Frame:
@@ -32,8 +33,27 @@ class Frame:
         self.__side_info.set_side_info(self.__buffer[starting_side_info_idx:], self.__header)
         self.__set_main_data(file_data, curr_offset)
 
+        for gr in range(2):
+            for ch in range(self.__header.channels):
+                self.__requantize(gr, ch)
+
+            if self.__header.channel_mode == ChannelMode.JointStereo and self.__header.mode_extension[0]:
+                self.__ms_stereo(gr)
+
+            for ch in range(self.__header.channels):
+                if self.__side_info.block_type[gr][ch] == 2 or self.__side_info.mixed_block_flag[gr][ch]:
+                    self.__reorder(gr, ch)
+                else:
+                    self.__alias_reduction(gr, ch)
+
+                self.__imdct(gr, ch)
+                self.__frequency_inversion(gr, ch)
+                self.__synth_filterbank(gr, ch)
+
+        self.__interleave()
+
     # Determine the frame size.
-    def set_frame_size(self, ):
+    def set_frame_size(self):
         samples_per_frame = 0
 
         if self.__header.layer == 3:
@@ -289,7 +309,7 @@ class Frame:
 
         sample = 0
         i = 0
-        while sample < 576:
+        while sample < NUM_OF_FREQUENCIES:
             if self.__side_info.block_type[gr][ch] == 2 or (self.__side_info.mixed_block_flag[gr][ch] and sfb >= 8):
                 if i == self.__header.band_width.short_win[sfb]:
                     i = 0
@@ -322,6 +342,68 @@ class Frame:
 
             sample += 1
             i += 1
+
+    #  The left and right channels are added together to form the middle channel. The
+    #  difference between each channel is stored in the side channel.
+    def __ms_stereo(self, gr: int):
+        for sample in range(NUM_OF_FREQUENCIES):
+            middle = self.__samples[gr][0][sample]
+            side = self.__samples[gr][1][sample]
+            self.__samples[gr][0][sample] = (middle + side) / SQRT2
+            self.__samples[gr][1][sample] = (middle - side) / SQRT2
+
+    # Reorder short blocks, mapping from scalefactor subbands (for short windows) to 18 sample blocks.
+    def __reorder(self, gr: int, ch: int):
+        total = 0
+        start = 0
+        block = 0
+        samples = np.zeros(NUM_OF_FREQUENCIES)
+
+        for sb in range(12):
+            sb_width = self.__header.band_width.short_win[sb]
+            for ss in range(sb_width):
+                samples[start + block + 0] = self.__samples[gr][ch][total + ss + sb_width * 0]
+                samples[start + block + 6] = self.__samples[gr][ch][total + ss + sb_width * 1]
+                samples[start + block + 12] = self.__samples[gr][ch][total + ss + sb_width * 2]
+
+                if block != 0 and block % 5 == 0:
+                    start += 18
+                    block = 0
+                else:
+                    block += 1
+
+            total += sb_width * 3
+
+        for i in range(NUM_OF_FREQUENCIES):
+            self.__samples[gr][ch][i] = samples[i]
+
+    def __alias_reduction(self, gr: int, ch: int):
+        cs = [.8574929257, .8817419973, .9496286491, .9833145925, .9955178161, .9991605582, .9998991952, .9999931551]
+        ca = [-.5144957554, -.4717319686, -.3133774542, -.1819131996, -.0945741925, -.0409655829, -.0141985686,
+              -.0036999747]
+
+        sb_max = 2 if self.__side_info.mixed_block_flag[gr][ch] else 32
+
+        for sb in range(1, sb_max):
+            for sample in range(8):
+                offset1 = 18 * sb - sample - 1
+                offset2 = 18 * sb + sample
+                s1 = self.__samples[gr][ch][offset1]
+                s2 = self.__samples[gr][ch][offset2]
+                self.__samples[gr][ch][offset1] = s1 * cs[sample] - s2 * ca[sample]
+                self.__samples[gr][ch][offset2] = s2 * cs[sample] + s1 * ca[sample]
+
+    def __imdct(self, gr: int, ch: int):
+        pass
+
+    def __frequency_inversion(self, gr: int, ch: int):
+        pass
+
+    def __synth_filterbank(self, gr: int, ch: int):
+        pass
+
+    def __interleave(self):
+        pass
 
     @property
     def frame_size(self):
