@@ -393,6 +393,18 @@ class Frame:
                 self.__samples[gr][ch][offset1] = s1 * cs[sample] - s2 * ca[sample]
                 self.__samples[gr][ch][offset2] = s2 * cs[sample] + s1 * ca[sample]
 
+    def __imdct(self, gr: int, ch: int):
+        pass
+
+    def __frequency_inversion(self, gr: int, ch: int):
+        pass
+
+    def __synth_filterbank(self, gr: int, ch: int):
+        pass
+
+    def __interleave(self):
+        pass
+
     @property
     def frame_size(self):
         return self.__frame_size
