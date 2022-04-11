@@ -24,6 +24,8 @@ class MP3Parser:
             self.__file_data = file_data
             self.__file_length = len(file_data)
             self.__offset = offset
+            self.__init_curr_header()
+            self.__curr_frame.set_frame_size()
         else:
             self.__valid = False
 

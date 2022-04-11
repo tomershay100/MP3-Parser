@@ -1,3 +1,4 @@
+import numpy as np
 import sys
 
 BYTE_LENGTH = 8
@@ -55,6 +56,8 @@ def left_shift_char(a: bytes, b: int):
 def get_bits(buffer: list, start_bit: int, slice_len: int):
     # exclude the last bit of the slice
     end_bit = start_bit + slice_len - 1
+    if type(start_bit) != int:
+        pass
     start_byte = start_bit >> 3
     end_byte = end_bit >> 3
 
