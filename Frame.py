@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 
 import tables
@@ -8,6 +10,33 @@ from FrameSideInformation import FrameSideInformation
 NUM_PREV_FRAMES = 9
 NUM_OF_FREQUENCIES = 576
 SQRT2 = 2 ** 0.5
+
+
+def create_sine_block():
+    sine_block = np.zeros((4, 36))
+
+    for i in range(36):
+        sine_block[0][i] = math.sin(math.pi / 36.0 * (i + 0.5))
+    for i in range(18):
+        sine_block[1][i] = math.sin(math.pi / 36.0 * (i + 0.5))
+    for i in range(18, 24):
+        sine_block[1][i] = 1.0
+    for i in range(24, 30):
+        sine_block[1][i] = math.sin(math.pi / 12.0 * (i - 18.0 + 0.5))
+    for i in range(30, 36):
+        sine_block[1][i] = 1.0
+    for i in range(12):
+        sine_block[2][i] = math.sin(math.pi / 12.0 * (i + 0.5))
+    for i in range(6):
+        sine_block[3][i] = 0.0
+    for i in range(6, 12):
+        sine_block[3][i] = math.sin(math.pi / 12.0 * (i - 6.0 + 0.5))
+    for i in range(12, 18):
+        sine_block[3][i] = 1.0
+    for i in range(18, 36):
+        sine_block[3][i] = math.sin(math.pi / 36.0 * (i + 0.5))
+
+    return sine_block
 
 
 class Frame:
@@ -24,6 +53,7 @@ class Frame:
         self.__main_data: list = []
         self.__samples: np.ndarray = np.zeros((2, 2, NUM_OF_FREQUENCIES))
         self.__pcm: np.ndarray = np.zeros((NUM_OF_FREQUENCIES * 4))
+        self.__sine_block = create_sine_block()
 
     def init_frame_params(self, buffer, file_data, curr_offset):
         self.__buffer = buffer
@@ -392,8 +422,45 @@ class Frame:
                 self.__samples[gr][ch][offset1] = s1 * cs[sample] - s2 * ca[sample]
                 self.__samples[gr][ch][offset2] = s2 * cs[sample] + s1 * ca[sample]
 
+    # Inverted modified discrete cosine transformations (IMDCT) are applied to each sample and are afterwards windowed
+    # to fit their window shape. As an addition, the samples are overlapped.
     def __imdct(self, gr: int, ch: int):
-        pass
+        sample_block = np.zeros(36)
+        n = 12 if self.side_info.block_type[gr][ch] == 2 else 36
+        half_n = int(n / 2)
+        sample = 0
+
+        for block in range(32):
+            for win in range(3 if self.side_info.block_type[gr][ch] == 2 else 1):
+                for i in range(n):
+                    xi = 0.0
+                    for k in range(half_n):
+                        s = self.__samples[gr][ch][18 * block + half_n * win + k]
+                        xi += s * math.cos(math.pi / (2 * n) * (2 * i + 1 + half_n) * (2 * k + 1))
+
+                    # Windowing samples.
+                    sample_block[win * n + i] = xi * self.__sine_block[self.side_info.block_type[gr][ch]][i]
+
+            if self.side_info.block_type[gr][ch] == 2:
+                temp_block = np.copy(sample_block)
+                for i in range(6):
+                    sample_block[i] = 0
+                for i in range(6, 12):
+                    sample_block[i] = temp_block[0 + i - 6]
+                for i in range(12, 18):
+                    sample_block[i] = temp_block[0 + i - 6] + temp_block[12 + i - 12]
+                for i in range(18, 24):
+                    sample_block[i] = temp_block[12 + i - 12] + temp_block[24 + i - 18]
+                for i in range(24, 30):
+                    sample_block[i] = temp_block[24 + i - 18]
+                for i in range(30, 36):
+                    sample_block[i] = 0
+
+            # Overlap.
+            for i in range(18):
+                self.__samples[gr][ch][sample + i] = sample_block[i] + self.__prev_samples[ch][block][i]
+                self.__prev_samples[ch][block][i] = sample_block[18 + i]
+            sample += 18
 
     def __frequency_inversion(self, gr: int, ch: int):
         pass
