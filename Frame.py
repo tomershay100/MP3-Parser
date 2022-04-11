@@ -25,13 +25,13 @@ class Frame:
         self.__samples: np.ndarray = np.zeros((2, 2, NUM_OF_FREQUENCIES))
         self.__pcm: np.ndarray = np.zeros((NUM_OF_FREQUENCIES * 4))
 
-    def init_frame_params(self, buffer):
+    def init_frame_params(self, buffer, file_data, curr_offset):
         self.__buffer = buffer
-        self.__set_frame_size()
+        self.set_frame_size()
 
         starting_side_info_idx = 6 if self.__header.crc == 0 else 4
         self.__side_info.set_side_info(self.__buffer[starting_side_info_idx:], self.__header)
-        self.__set_main_data([0])
+        self.__set_main_data(file_data, curr_offset)
 
         for gr in range(2):
             for ch in range(self.__header.channels):
@@ -53,7 +53,7 @@ class Frame:
         self.__interleave()
 
     # Determine the frame size.
-    def __set_frame_size(self):
+    def set_frame_size(self):
         samples_per_frame = 0
 
         if self.__header.layer == 3:
@@ -82,7 +82,7 @@ class Frame:
 
     # Due to the Huffman bits' varying length the main_data isn't aligned with the frames.
     # Unpacks the scaling factors and quantized samples.
-    def __set_main_data(self, last_buffer: list):
+    def __set_main_data(self, file_data: list, curr_offset: int):
         constant = 21 if self.__header.channel_mode == ChannelMode.Mono else 36
         if self.__header.crc == 0:
             constant += 2
@@ -90,46 +90,46 @@ class Frame:
         # We'll put the main data in its own buffer. Main data may be larger than the previous frame and doesn't
         # Include the size of side info and headers
         if self.__side_info.main_data_begin == 0:
-            self.__main_data = self.__buffer[constant: self.frame_size - constant]
-        # TODO this requires getting last frame buffer from parser class
-        # else:
-        #     bound = 0
-        #     for frame in range(NUM_PREV_FRAMES):
-        #         bound += self.prev_frame_size[frame] - constant
-        #         if self.__side_info.main_data_begin < bound:
-        #             ptr_offset = self.__side_info.main_data_begin + frame * constant
-        #             buffer_offset = 0
-        #
-        #             # TODO change to numpy array
-        #             part = [[0] * NUM_PREV_FRAMES]
-        #             part[frame] = self.__side_info.main_data_begin
-        #             for i in range(frame):
-        #                 part[i] = self.prev_frame_size[i] - constant
-        #                 part[frame] -= part[i]
-        #
-        #             self.__main_data = last_buffer[len(last_buffer) - ptr_offset: part[frame]]
-        #             ptr_offset -= (part[frame] + constant)
-        #             for i in range(frame-1, -1, -1):
-        #                 self.__main_data.extend(last_buffer[len(last_buffer) - ptr_offset: part[i]])
-        #                 ptr_offset -= (part[i] + constant)
-        #             self.__main_data.extend((self.__buffer[constant: self.frame_size - constant]))
-        #             break
+            self.__main_data = self.__buffer[constant: self.frame_size]
+        else:
+            bound = 0
+            for frame in range(NUM_PREV_FRAMES):
+                bound += self.prev_frame_size[frame] - constant
+                if self.__side_info.main_data_begin < bound:
+                    ptr_offset = self.__side_info.main_data_begin + frame * constant
 
-        # bit = 0
-        # for gr in range(2):
-        #     for ch in range(header.channels):
-        #         max_bit = bit + side_info.part2_3_length[gr][ch]
-        #         bit = unpack_scalefac(gr, ch, bit)
-        #         unpack_samples(header, gr, ch, bit, max_bit)
-        #         bit = max_bit
+                    part = np.zeros(NUM_PREV_FRAMES)
+                    part[frame] = self.__side_info.main_data_begin
+                    for i in range(frame):
+                        part[i] = self.prev_frame_size[i] - constant
+                        part[frame] -= part[i]
+
+                    loc = int(curr_offset - ptr_offset)
+                    self.__main_data = file_data[loc: loc + int(part[frame])]
+                    ptr_offset -= (part[frame] + constant)
+                    for i in range(frame - 1, -1, -1):
+                        loc = int(curr_offset - ptr_offset)
+                        self.__main_data.extend(file_data[loc: loc + int(part[i])])
+                        ptr_offset -= (part[i] + constant)
+                    self.__main_data.extend((self.__buffer[constant: self.frame_size]))
+                    break
+        bit = 0
+        for gr in range(2):
+            for ch in range(self.__header.channels):
+                max_bit = int(bit + self.__side_info.part2_3_length[gr][ch])
+                bit = self.__unpack_scalefac(gr, ch, bit)
+                self.__unpack_samples(gr, ch, bit, max_bit)
+                bit = max_bit
+
+        pass
 
     # Unpack the scale factor indices from the main data. slen1 and slen2 are the size (in bits) of each scaling factor.
     # There are 21 scaling factors for long windows and 12 for each short window.
     def __unpack_scalefac(self, gr: int, ch: int, bit: int):
         sfb = 0
         window = 0
-        scalefactor_length = [slen[self.__side_info.scalefac_compress[gr][ch]][0],
-                              slen[self.__side_info.scalefac_compress[gr][ch]][1]]
+        scalefactor_length = [slen[int(self.__side_info.scalefac_compress[gr][ch])][0],
+                              slen[int(self.__side_info.scalefac_compress[gr][ch])][1]]
 
         # No scale factor transmission for short blocks.
         if self.__side_info.block_type[gr][ch] == 2 and self.__side_info.window_switching[gr][ch]:
@@ -196,15 +196,109 @@ class Frame:
         return bit
 
     def __unpack_samples(self, gr, ch, bit, max_bit):
+        for i in range(NUM_OF_FREQUENCIES):
+            self.__samples[gr][ch][i] = 0
+
         # Get big value region boundaries.
         if self.side_info.window_switching[gr][ch] and self.side_info.block_type[gr][ch] == 2:
             region0 = 36
             region1 = 576
         else:
-            region0 = self.__header.band_index.long_win[self.side_info.region0_count[gr][ch] + 1]
-            region1 = self.__header.band_index.long_win[self.side_info.region0_count[gr][ch] + 1 +
-                                                        self.side_info.region1_count[gr[ch] + 1]]
-        # TODO continue from here
+            region0 = self.__header.band_index.long_win[int(self.side_info.region0_count[gr][ch]) + 1]
+            region1 = self.__header.band_index.long_win[int(self.side_info.region0_count[gr][ch]) + 1 +
+                                                        int(self.side_info.region1_count[gr][ch]) + 1]
+
+        # Get the samples in the big value region. Each entry in the Huffman tables yields two samples.
+        sample = 0
+        while sample < self.side_info.big_value[gr][ch] * 2:
+            if sample < region0:
+                table_num = int(self.side_info.table_select[gr][ch][0])
+                table = big_value_table[table_num]
+            elif sample < region1:
+                table_num = int(self.side_info.table_select[gr][ch][1])
+                table = big_value_table[table_num]
+            else:
+                table_num = int(self.side_info.table_select[gr][ch][2])
+                table = big_value_table[table_num]
+
+            if table_num == 0:
+                self.__samples[gr][ch][sample] = 0
+                sample += 2
+                continue
+
+            repeat = True
+            bit_sample = util.get_bits(self.__main_data, bit, 32)
+
+            # Cycle through the Huffman table and find a matching bit pattern.
+            row = 0
+            while row < big_value_max[table_num] and repeat:
+                for col in range(big_value_max[table_num]):
+                    i = 2 * big_value_max[table_num] * row + 2 * col
+                    value = table[i]
+                    size = table[i + 1]
+                    if value >> (32 - size) == bit_sample >> (32 - size):
+                        bit += size
+                        values = (row, col)
+                        for i in range(2):
+
+                            # linbits extend the sample's size if needed.
+                            linbit = 0
+                            if big_value_linbit[table_num] != 0 and values[i] == big_value_max[table_num] - 1:
+                                linbit = util.get_bits(self.__main_data, bit, big_value_linbit[table_num])
+                                bit += big_value_linbit[table_num]
+
+                            # If the sample is negative or positive.
+                            sign = 1
+                            if values[i] > 0:
+                                sign = -1 if util.get_bits(self.__main_data, bit, 1) > 0 else 1
+                                bit += 1
+
+                            self.__samples[gr][ch][sample + i] = sign * (values[i] + linbit)
+
+                        repeat = False
+                        break
+                row += 1
+            sample += 2
+
+        # Quadruples region.
+        while bit < max_bit and sample + 4 < 576:
+            values = [0, 0, 0, 0]
+
+            # Flip bits.
+            if self.side_info.count1table_select[gr][ch] == 1:
+                bit_sample = util.get_bits(self.__main_data, bit, 4)
+                bit += 4
+                values[0] = 0 if (bit_sample & 0x08) > 0 else 1
+                values[1] = 0 if (bit_sample & 0x04) > 0 else 1
+                values[2] = 0 if (bit_sample & 0x02) > 0 else 1
+                values[3] = 0 if (bit_sample & 0x01) > 0 else 1
+            else:
+                bit_sample = util.get_bits(self.__main_data, bit, 32)
+                for entry in range(16):
+                    value = quad_table_1.hcod[entry]
+                    size = quad_table_1.hlen[entry]
+
+                    if value >> (32 - size) == bit_sample >> (32 - size):
+                        bit += size
+                        for i in range(4):
+                            values[i] = int(quad_table_1.value[entry][i])
+                        break
+
+            # Get the sign bit.
+            for i in range(4):
+                if values[i] > 0 and util.get_bits(self.__main_data, bit, 1) == 1:
+                    values[i] = -values[i]
+                bit += 1
+
+            for i in range(4):
+                self.__samples[gr][ch][sample + i] = values[i]
+
+            sample += 4
+
+        # Fill remaining samples with zero.
+        while sample < 576:
+            self.__samples[gr][ch][sample] = 0
+            sample += 1
 
     # The reduced samples are rescaled to their original scales and precisions.
     def __requantize(self, gr: int, ch: int):
@@ -234,8 +328,10 @@ class Frame:
                     sfb += 1
 
                 exp1 = self.__side_info.global_gain[gr][ch] - 210.0
+
+                pretab_val = tables.pretab[sfb] if sfb < len(tables.pretab) else 0
                 exp2 = SCALEFAC_MULT * (
-                        self.__side_info.scalefac_l[gr][ch][sfb] + self.__side_info.preflag[gr][ch] * tables.pretab[sfb])
+                        self.__side_info.scalefac_l[gr][ch][sfb] + self.__side_info.preflag[gr][ch] * pretab_val)
 
             sign = -1.0 if self.__samples[gr][ch][sample] < 0 else 1.0
             a = pow(abs(self.__samples[gr][ch][sample]), 4.0 / 3.0)
