@@ -22,7 +22,7 @@ if __name__ == '__main__':
     # offset = id3_decoder.get_offset()
 
     offset = 148
-    decoder = MP3Parser(hex_data, offset)
+    decoder = MP3Parser(hex_data, offset,file_path)
 
     start = time.time()
     num_of_parsed_frames = decoder.parse_file()
