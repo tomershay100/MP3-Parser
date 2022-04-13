@@ -16,7 +16,7 @@ def parse_metadata(file_name: str, id3_parser: ID3):
                 metadata.write(f'- {flag}\n')
             metadata.write('\n')
 
-        metadata.write('ID3 Frames:')
+        metadata.write('\nID3 Frames:\n')
         for i, frame in enumerate(id3_parser.id3_frames):
             metadata.write(f'Frame number: {i}\n')
             metadata.write(f'Frame ID: {frame.id}\n')
@@ -25,6 +25,7 @@ def parse_metadata(file_name: str, id3_parser: ID3):
                 metadata.write('Frame Flags:\n')
                 for flag in frame.frame_flags:
                     metadata.write(f'- {flag}\n')
+            metadata.write('\n')
 
 
 if __name__ == '__main__':

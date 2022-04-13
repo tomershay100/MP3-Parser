@@ -31,8 +31,8 @@ class ID3FrameFlags(Enum):
 
 
 class ID3Frame:
-    def __init__(self, frame_id: str, flags: int, content: bytes):
-        self.__frame_id: str = frame_id
+    def __init__(self, frame_id: list, flags: int, content: bytes):
+        self.__frame_id: list = frame_id
         self.__content: bytes = content
         self.__frame_flags: list = []
         self.__set_flags(flags)
@@ -51,11 +51,12 @@ class ID3Frame:
 
     @property
     def id(self):
-        return self.__frame_id
+        chrs = [chr(k) for k in self.__frame_id]
+        return ''.join(chrs)
 
     @property
     def content(self):
-        return self.__content
+        return self.__content.decode('utf-8')
 
     @property
     def frame_flags(self):
@@ -84,7 +85,7 @@ class ID3:
             if self.__set_flags(self.__buffer[5]):
                 self.__valid = True
                 self.__set_offset(util.char_to_int(self.__buffer[6:10]))
-                self.__set_extended_header_size(self.__buffer[7])
+                self.__set_extended_header_size(util.char_to_int(self.__buffer[10:14]))
                 self.__set_frames(10 + self.__extended_header_size)
             else:
                 self.__valid = False
@@ -123,19 +124,22 @@ class ID3:
         size = self.__offset - self.__extended_header_size - footer_size
         i = 0
 
-        while i < size:
-            frame_id = str(self.__buffer[start + i: start + i + 4])
+        valid = True
+        while i < size and valid:
+            frame_id = self.__buffer[start + i: start + i + 4]
             for c in frame_id:
-                if not (c.isupper() or c.isdigit()):  # Check for legal ID
+                if not (chr(c).isupper() or chr(c).isdigit()):  # Check for legal ID
+                    valid = False
                     break
-            i += 4
-            field_size = util.char_to_int(self.__buffer[start + i: start + i + 4])  # 4 Bytes
-            i += 4
-            frame_flags = util.get_bits(self.__buffer, util.BYTE_LENGTH * (start + i), 16)  # 2 Bytes
-            i += 2
-            frame_content = bytes(self.__buffer[start + i: start + i + field_size])
-            i += field_size
-            self.__id3_frames.append(ID3Frame(frame_id, frame_flags, frame_content))
+            if valid:
+                i += 4
+                field_size = util.char_to_int(self.__buffer[start + i: start + i + 4])  # 4 Bytes
+                i += 4
+                frame_flags = util.get_bits(self.__buffer, util.BYTE_LENGTH * (start + i), 16)  # 2 Bytes
+                i += 2
+                frame_content = bytes(self.__buffer[start + i: start + i + field_size])
+                i += field_size
+                self.__id3_frames.append(ID3Frame(frame_id, frame_flags, frame_content))
 
     @property
     def offset(self):
@@ -164,13 +168,3 @@ class ID3:
     @property
     def id3_frames(self):
         return self.__id3_frames
-
-
-
-
-
-
-
-
-
-
