@@ -45,11 +45,12 @@ if __name__ == '__main__':
     if id3_decoder.is_valid:
         parse_metadata(file_path, id3_decoder)
         offset = id3_decoder.offset
-        decoder = MP3Parser(hex_data, offset, file_path)
 
-        start = time.time()
-        num_of_parsed_frames = decoder.parse_file()
-        parsing_time = time.time() - start
-        print('Parsed', num_of_parsed_frames, 'frames in', parsing_time, 'seconds')
     else:
-        raise Exception('ID3 metadata is invalid, unable to parse file.')
+        offset = 0
+
+    decoder = MP3Parser(hex_data, offset, file_path)
+    start = time.time()
+    num_of_parsed_frames = decoder.parse_file()
+    parsing_time = time.time() - start
+    print('Parsed', num_of_parsed_frames, 'frames in', parsing_time, 'seconds')
