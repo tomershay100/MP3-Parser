@@ -20,6 +20,13 @@ def bytes_to_int(byte_list: bytes):
     return int.from_bytes(byte_list, sys.byteorder)
 
 
+def char_to_int(four_bytes: list):
+    num = 0x00
+    for i in range(4):
+        num = (num << 7) + four_bytes[i]
+    return int(num)
+
+
 def right_shift_char(a: bytes, b: int):
     result_int = int.from_bytes(a, byteorder="big") >> b
     return result_int.to_bytes(len(a), byteorder="big")
