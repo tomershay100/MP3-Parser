@@ -1,0 +1,29 @@
+METADATA FOR FILE: test.mp3
+################################
+
+
+ID3 Version: 2.4.0
+ID3 Frames:Frame number: 0
+Frame ID: [84, 82, 67, 75]
+Content: b'\x031\x00'
+Frame number: 1
+Frame ID: [84, 68, 82, 67]
+Content: b'\x031999\x00'
+Frame number: 2
+Frame ID: [84, 73, 84, 50]
+Content: b'\x03Track 37\x00'
+Frame number: 3
+Frame ID: [84, 67, 79, 78]
+Content: b'\x03Pop\x00'
+Frame number: 4
+Frame ID: [84, 88, 88, 88]
+Content: b'\x03comment\x00From testsounds.com\x00'
+Frame number: 5
+Frame ID: [84, 83, 83, 69]
+Content: b'\x03Lavf58.45.100\x00'
+Frame number: 6
+Frame ID: [0, 0, 0, 0]
+Content: b''
+Frame number: 7
+Frame ID: [255, 251, 144, 0]
+Content: b''
