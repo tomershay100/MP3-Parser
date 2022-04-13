@@ -15,8 +15,10 @@ class MP3Parser:
         # List of integers that contain the file (without ID3) data
         self.__file_data: list = []
         self.__buffer: list = []
+        self.__pcm_data: np.array = np.array([])
         self.__file_length: int = 0
-        self.file_path = file_path
+        self.__file_path = file_path
+        self.__new_file_path = self.__file_path[:-4] + '.wav'
 
         # cut the id3 from hex_data
         self.__buffer = file_data[offset:]
@@ -52,24 +54,13 @@ class MP3Parser:
                 num_of_parsed_frames += 1
                 self.__offset += self.__curr_frame.frame_size
                 self.__buffer = self.__file_data[self.__offset:]
-                print(f'Parsed: {num_of_parsed_frames}')
 
             pcm_data.extend(list(self.__curr_frame.pcm.copy()))
 
-        new_file_path = self.file_path[:-4] + '.wav'
-        pcm_data = np.array(pcm_data)
-        # Convert PCM to WAV
-        write(new_file_path, self.__curr_frame.sampling_rate, pcm_data.astype(np.float32))
+        self.__pcm_data = np.array(pcm_data)
+
         return num_of_parsed_frames
 
-# buffer = [0] * 1000
-# buffer[0], buffer[1] = 0xFF, 0xE0
-# self = MP3Parser(buffer)
-# pass
-#
-# print('[2][2] int', np.array([[0] * 2] * 2).shape)
-# print('[2][2] bool', np.array([[False] * 2] * 2).shape)
-# print('[2][4] bool', np.array([[False] * 4] * 2).shape)
-# print('[2][2][3] int', np.array([[3 * [0]] * 2] * 2).shape)
-# print('[2][2][22] int', np.array([[22 * [0]] * 2] * 2).shape)
-# print('[2][2][3][13] int', np.array([[[13 * [0]] * 3] * 2] * 2).shape)
+    def write_to_wav(self):
+        # Convert PCM to WAV
+        write(self.__new_file_path, self.__curr_frame.sampling_rate, self.__pcm_data.astype(np.float32))

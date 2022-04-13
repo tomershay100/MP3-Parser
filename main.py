@@ -54,3 +54,5 @@ if __name__ == '__main__':
     num_of_parsed_frames = decoder.parse_file()
     parsing_time = time.time() - start
     print('Parsed', num_of_parsed_frames, 'frames in', parsing_time, 'seconds')
+
+    decoder.write_to_wav()
