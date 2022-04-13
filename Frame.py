@@ -8,7 +8,7 @@ from FrameHeader import *
 from FrameSideInformation import FrameSideInformation
 
 NUM_PREV_FRAMES = 9
-NUM_OF_FREQUENCIES = 576
+NUM_OF_SAMPLES = 576
 
 SQRT2 = math.sqrt(2)
 PI = math.pi
@@ -62,14 +62,16 @@ class Frame:
         self.__fifo: np.ndarray = np.zeros((2, 1024))
 
         self.__main_data: list = []
-        self.__samples: np.ndarray = np.zeros((2, 2, NUM_OF_FREQUENCIES))
-        self.__pcm: np.ndarray = np.zeros((NUM_OF_FREQUENCIES * 4))
+        self.__samples: np.ndarray = np.zeros((2, 2, NUM_OF_SAMPLES))
+        self.__pcm: np.ndarray
         self.__sine_block = create_sine_block()
         self.__synth_filterbank_block = init_synth_filterbank_block()
 
     def init_frame_params(self, buffer, file_data, curr_offset):
         self.__buffer = buffer
         self.set_frame_size()
+
+        self.__pcm = np.zeros((2 * NUM_OF_SAMPLES, self.__header.channels))
 
         starting_side_info_idx = 6 if self.__header.crc == 0 else 4
         self.__side_info.set_side_info(self.__buffer[starting_side_info_idx:], self.__header)
@@ -236,7 +238,7 @@ class Frame:
         return bit
 
     def __unpack_samples(self, gr, ch, bit, max_bit):
-        for i in range(NUM_OF_FREQUENCIES):
+        for i in range(NUM_OF_SAMPLES):
             self.__samples[gr][ch][i] = 0
 
         # Get big value region boundaries.
@@ -350,7 +352,7 @@ class Frame:
 
         sample = 0
         i = 0
-        while sample < NUM_OF_FREQUENCIES:
+        while sample < NUM_OF_SAMPLES:
             if self.__side_info.block_type[gr][ch] == 2 or (self.__side_info.mixed_block_flag[gr][ch] and sfb >= 8):
                 if i == self.__header.band_width.short_win[sfb]:
                     i = 0
@@ -387,7 +389,7 @@ class Frame:
     #  The left and right channels are added together to form the middle channel. The
     #  difference between each channel is stored in the side channel.
     def __ms_stereo(self, gr: int):
-        for sample in range(NUM_OF_FREQUENCIES):
+        for sample in range(NUM_OF_SAMPLES):
             middle = self.__samples[gr][0][sample]
             side = self.__samples[gr][1][sample]
             self.__samples[gr][0][sample] = (middle + side) / SQRT2
@@ -398,7 +400,7 @@ class Frame:
         total = 0
         start = 0
         block = 0
-        samples = np.zeros(NUM_OF_FREQUENCIES)
+        samples = np.zeros(NUM_OF_SAMPLES)
 
         for sb in range(12):
             sb_width = self.__header.band_width.short_win[sb]
@@ -415,7 +417,7 @@ class Frame:
 
             total += sb_width * 3
 
-        for i in range(NUM_OF_FREQUENCIES):
+        for i in range(NUM_OF_SAMPLES):
             self.__samples[gr][ch][i] = samples[i]
 
     def __alias_reduction(self, gr: int, ch: int):
@@ -513,12 +515,10 @@ class Frame:
         self.__samples[gr][ch] = pcm
 
     def __interleave(self):
-        i = 0
         for gr in range(2):
             for sample in range(576):
                 for ch in range(self.__header.channels):
-                    self.__pcm[i] = self.__samples[gr][ch][sample]
-                    i += 1
+                    self.__pcm[sample + NUM_OF_SAMPLES * gr][ch] = self.__samples[gr][ch][sample]
 
     @property
     def frame_size(self):
@@ -539,6 +539,14 @@ class Frame:
     @property
     def side_info(self):
         return self.__side_info
+
+    @property
+    def pcm(self):
+        return self.__pcm
+
+    @property
+    def sampling_rate(self):
+        return self.__header.sampling_rate
 
     def init_header_params(self, buffer):
         self.__header.init_header_params(buffer)

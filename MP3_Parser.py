@@ -1,12 +1,13 @@
 # import numpy as np
 from Frame import *
+from scipy.io.wavfile import write
 
 HEADER_SIZE = 4
 
 
 class MP3Parser:
 
-    def __init__(self, file_data, offset):
+    def __init__(self, file_data, offset, file_path):
         # Declarations
         # self.__curr_header: FrameHeader = FrameHeader()
         self.__curr_frame: Frame = Frame()
@@ -15,6 +16,7 @@ class MP3Parser:
         self.__file_data: list = []
         self.__buffer: list = []
         self.__file_length: int = 0
+        self.file_path = file_path
 
         # cut the id3 from hex_data
         self.__buffer = file_data[offset:]
@@ -40,6 +42,7 @@ class MP3Parser:
 
     # TODO return pcm
     def parse_file(self):
+        pcm_data = []
         num_of_parsed_frames = 0
 
         while self.__valid and self.__file_length > self.__offset + HEADER_SIZE:
@@ -50,6 +53,12 @@ class MP3Parser:
                 self.__offset += self.__curr_frame.frame_size
                 self.__buffer = self.__file_data[self.__offset:]
 
+            pcm_data.extend(list(self.__curr_frame.pcm.copy()))
+
+        new_file_path = self.file_path[:-4] + '.wav'
+        pcm_data = np.array(pcm_data)
+        # Convert PCM to WAV
+        write(new_file_path, self.__curr_frame.sampling_rate, pcm_data.astype(np.float32))
         return num_of_parsed_frames
 
 # buffer = [0] * 1000

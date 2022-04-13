@@ -45,9 +45,7 @@ if __name__ == '__main__':
     if id3_decoder.is_valid:
         parse_metadata(file_path, id3_decoder)
         offset = id3_decoder.offset
-
-        # offset = 148
-        decoder = MP3Parser(hex_data, offset)
+        decoder = MP3Parser(hex_data, offset, file_path)
 
         start = time.time()
         num_of_parsed_frames = decoder.parse_file()
