@@ -55,9 +55,9 @@ class MP3Parser:
 
             pcm_data.extend(list(self.__curr_frame.pcm.copy()))
 
-        # Convert PCM to WAV
-        pcm_data = np.array(pcm_data)
         new_file_path = self.file_path[:-4] + '.wav'
+        pcm_data = np.array(pcm_data)
+        # Convert PCM to WAV
         write(new_file_path, self.__curr_frame.sampling_rate, pcm_data.astype(np.float32))
         return num_of_parsed_frames
 
