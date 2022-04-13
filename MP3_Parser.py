@@ -52,6 +52,7 @@ class MP3Parser:
                 num_of_parsed_frames += 1
                 self.__offset += self.__curr_frame.frame_size
                 self.__buffer = self.__file_data[self.__offset:]
+                print(f'Parsed: {num_of_parsed_frames}')
 
             pcm_data.extend(list(self.__curr_frame.pcm.copy()))
 

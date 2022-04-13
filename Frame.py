@@ -354,7 +354,9 @@ class Frame:
         i = 0
         while sample < NUM_OF_SAMPLES:
             if self.__side_info.block_type[gr][ch] == 2 or (self.__side_info.mixed_block_flag[gr][ch] and sfb >= 8):
-                if i == self.__header.band_width.short_win[sfb]:
+                short_win_val = self.__header.band_width.short_win[sfb] if sfb < len(self.__header.band_width.short_win
+                                                                                     ) else 0
+                if i == short_win_val:
                     i = 0
                     if window == 2:
                         window = 0
