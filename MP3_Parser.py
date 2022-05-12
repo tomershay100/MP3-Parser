@@ -64,5 +64,5 @@ class MP3Parser:
         return num_of_parsed_frames
 
     def write_to_wav(self):
-        # Convert PCM to WAV
-        write(self.__new_file_path, self.__curr_frame.sampling_rate, self.__pcm_data.astype(np.float32))
+        # Convert PCM to WAV (from 32-bit floating-point to 16-bit PCM by mult by 32767)
+        write(self.__new_file_path, self.__curr_frame.sampling_rate, (self.__pcm_data * 32767).astype(np.int16))
