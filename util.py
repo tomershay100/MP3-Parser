@@ -44,9 +44,16 @@ def get_bits(buffer: list, start_bit: int, slice_len: int):
     start_byte = start_bit >> 3
     end_byte = end_bit >> 3
 
+    buff_copy = buffer.copy()
+    if end_byte > len(buff_copy):
+        buff_copy.append(0)
+
     bits = []
     for idx in range(start_byte, end_byte + 1):
-        num = buffer[idx]
+        try:
+            num = buff_copy[idx]
+        except:
+            pass
         out = [1 if num & (1 << (BYTE_LENGTH - 1 - n)) else 0 for n in range(BYTE_LENGTH)]
         bits.extend(out)
 
