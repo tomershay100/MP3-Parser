@@ -47,8 +47,8 @@ def get_bits(buffer: list, start_bit: int, slice_len: int):
     buff_copy = buffer.copy()
 
     buff_len = len(buffer)
-    # pad with zeros
     if end_byte >= buff_len:
+        # pad with zeros
         buff_copy.extend([0 for _ in range(end_byte - buff_len + 1)])
 
     bits = []
